@@ -1,0 +1,21 @@
+{
+  "name": "Hello World",
+  "id": "hello_world",
+  "version": "1.1.0",
+  "author": "yakuda",
+  "description": "Example plugin: shows a greeting and demonstrates placeholders + settings.",
+  "Github": "github.com/yakuda-stack",
+  "main": "main.py",
+  "enabled": true,
+  "template": "\ud83d\udc4b {hello_world}",
+  "placeholders": {
+    "greeting": "just the greeting word",
+    "mood": "the mood emoji"
+  },
+  "settings": [
+    {"key": "greeting", "type": "text", "label": "Greeting", "default": "Hello", "hint": "The word in front of the mood"},
+    {"key": "mood", "type": "text", "label": "Mood emoji", "default": "\u2728"},
+    {"key": "shout", "type": "bool", "label": "UPPERCASE", "default": false},
+    {"key": "repeat", "type": "int", "label": "Repeat the mood", "default": 1, "min": 1, "max": 5}
+  ]
+}

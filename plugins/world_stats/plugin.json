@@ -1,7 +1,7 @@
 {
   "name": "World Stats",
   "id": "world_stats",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "author": "yakuda",
   "description": "Live VRChat info: players in your instance, the world name and your local clock.",
   "Github": "github.com/yakuda-stack",
@@ -11,7 +11,7 @@
   "placeholders": {
     "player_in_world": "number of players in the instance",
     "group_world": "world name",
-    "instance_type": "Public / Friends+ / Invite \u2026",
+    "instance_type": "Public / Friends+ / Invite …",
     "realtime": "your local clock"
   },
   "global_placeholders": [
@@ -21,12 +21,55 @@
     "realtime"
   ],
   "settings": [
-    {"key": "players", "type": "bool", "label": "Players in world  \u2013  {player_in_world}", "default": true},
-    {"key": "world", "type": "bool", "label": "World name  \u2013  {group_world}", "default": true},
-    {"key": "clock", "type": "bool", "label": "Local time  \u2013  {realtime}", "default": true},
-    {"key": "player_icon", "type": "text", "label": "Player icon", "default": "\ud83d\udc65", "hint": "Prefix in front of the player count, empty for none"},
-    {"key": "clock_format", "type": "text", "label": "Clock format", "default": "%H:%M", "hint": "strftime, e.g. %H:%M (21:45) or %I:%M %p (09:45 PM)"},
-    {"key": "world_max", "type": "int", "label": "Max world name length", "default": 24, "min": 6, "max": 64},
-    {"key": "log_dir", "type": "text", "label": "VRChat log folder", "default": "", "hint": "Leave empty for auto-detect (Proton prefix is found on its own)"}
-  ]
+    {
+      "key": "players",
+      "type": "bool",
+      "label": "Players in world  –  {player_in_world}",
+      "default": true
+    },
+    {
+      "key": "world",
+      "type": "bool",
+      "label": "World name  –  {group_world}",
+      "default": true
+    },
+    {
+      "key": "clock",
+      "type": "bool",
+      "label": "Local time  –  {realtime}",
+      "default": true
+    },
+    {
+      "key": "player_icon",
+      "type": "text",
+      "label": "Player icon",
+      "default": "👥",
+      "hint": "Prefix in front of the player count, empty for none"
+    },
+    {
+      "key": "clock_format",
+      "type": "text",
+      "label": "Clock format",
+      "default": "%H:%M",
+      "hint": "strftime, e.g. %H:%M (21:45) or %I:%M %p (09:45 PM)"
+    },
+    {
+      "key": "world_max",
+      "type": "slider",
+      "label": "World name length",
+      "default": 24,
+      "min": 6,
+      "max": 64,
+      "suffix": " chars",
+      "hint": "Longer names are cut off - the chatbox has limited space"
+    },
+    {
+      "key": "log_dir",
+      "type": "text",
+      "label": "VRChat log folder",
+      "default": "",
+      "hint": "Leave empty for auto-detect (Proton prefix is found on its own)"
+    }
+  ],
+  "image": "preview.png"
 }

@@ -61,7 +61,8 @@
       "min": 6,
       "max": 64,
       "suffix": " chars",
-      "hint": "Longer names are cut off - the chatbox has limited space"
+      "hint": "Longer names are cut off - the chatbox has limited space",
+      "depends": "world"
     },
     {
       "key": "log_dir",

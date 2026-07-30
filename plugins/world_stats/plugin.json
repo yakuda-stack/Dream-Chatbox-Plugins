@@ -1,7 +1,7 @@
 {
   "name": "World Stats",
   "id": "world_stats",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "author": "yakuda",
   "description": "Live VRChat info: players in your instance, the world name and your local clock.",
   "Github": "github.com/yakuda-stack",

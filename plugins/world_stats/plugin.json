@@ -1,12 +1,16 @@
 {
   "name": "World Stats",
   "id": "world_stats",
-  "version": "1.1.1",
+  "version": "1.2.0",
   "author": "yakuda",
-  "description": "Live VRChat info: players in your instance, the world name and your local clock.",
+  "description": "Live VRChat info: players in your instance, the world name and your local clock. Reads VRChat's output_log - Steam/Proton prefix on Linux, AppData\\\\LocalLow on Windows - and needs no extra tools.",
+  "summary": "Players in your instance, the world name and your local clock.",
   "Github": "github.com/yakuda-stack",
   "main": "main.py",
   "enabled": true,
+  "is_linux": true,
+  "is_windows": true,
+  "image": "logo.png",
   "template": "{player_in_world} {group_world} \\n {realtime}",
   "placeholders": {
     "player_in_world": "number of players in the instance",
@@ -69,8 +73,7 @@
       "type": "text",
       "label": "VRChat log folder",
       "default": "",
-      "hint": "Leave empty for auto-detect (Proton prefix is found on its own)"
+      "hint": "Leave empty for auto-detect - Steam/Proton prefix on Linux, AppData\\\\LocalLow on Windows"
     }
-  ],
-  "image": "logo.png"
+  ]
 }

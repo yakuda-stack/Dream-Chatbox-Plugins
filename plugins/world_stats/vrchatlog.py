@@ -35,6 +35,8 @@ No extra dependencies – stdlib only.
 
 import re
 import threading
+import os
+import platform
 from pathlib import Path
 
 VRCHAT_APPID = "438100"
@@ -44,6 +46,26 @@ _PREFIX_TAIL = Path(
     "pfx/drive_c/users/steamuser/AppData/LocalLow/VRChat/VRChat")
 
 # Steam roots to probe (native + common variants + Flatpak)
+IS_WINDOWS = platform.system() == "Windows"
+
+# On Windows VRChat writes straight into the user profile - no Proton
+# prefix to hunt for. LOCALAPPDATA points at ...\AppData\Local, and the
+# "Low" folder sits next to it, which is why this is not simply
+# LOCALAPPDATA/VRChat.
+def _windows_log_dirs():
+    dirs = []
+    home = Path.home()
+    dirs.append(home / "AppData" / "LocalLow" / "VRChat" / "VRChat")
+    local = os.environ.get("LOCALAPPDATA")
+    if local:
+        dirs.append(Path(local).parent / "LocalLow" / "VRChat" / "VRChat")
+    profile = os.environ.get("USERPROFILE")
+    if profile:
+        dirs.append(Path(profile) / "AppData" / "LocalLow" / "VRChat"
+                    / "VRChat")
+    return dirs
+
+
 _STEAM_ROOTS = [
     Path.home() / ".local/share/Steam",
     Path.home() / ".steam/steam",
@@ -142,6 +164,9 @@ class VRChatLogWatcher:
 
     # ----------------------------------------------------------- discovery
     def _library_roots(self):
+        if IS_WINDOWS:
+            # Steam libraries only matter for the Proton prefix hunt
+            return []
         """Extra Steam library folders parsed from libraryfolders.vdf –
         VRChat may live on a different drive than the main Steam root."""
         roots = []
@@ -161,6 +186,8 @@ class VRChatLogWatcher:
             p = Path(self._override).expanduser()
             return p if p.is_dir() else None
         candidates = []
+        if IS_WINDOWS:
+            candidates.extend(_windows_log_dirs())
         for base in _STEAM_ROOTS + self._library_roots():
             candidates.append(
                 base / "steamapps" / "compatdata" / VRCHAT_APPID
@@ -199,9 +226,10 @@ class VRChatLogWatcher:
         folder = self._find_log_dir()
         if folder is None:
             if not self._warned:
-                self.log("VRChat log: no output_log folder found "
-                         "(is VRChat installed via Steam/Proton?). "
-                         "Set the folder manually in the plugin settings.")
+                where = ("is VRChat installed?" if IS_WINDOWS
+                         else "is VRChat installed via Steam/Proton?")
+                self.log(f"VRChat log: no output_log folder found ({where}) "
+                         f"- set the folder manually in the plugin settings.")
                 self._warned = True
             with self._lock:
                 self._in_world = False

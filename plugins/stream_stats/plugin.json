@@ -1,0 +1,387 @@
+{
+  "name": "Stream Stats",
+  "id": "stream_stats",
+  "version": "1.0.0",
+  "author": "yakuda",
+  "description": "Live Twitch and YouTube data in the chatbox: channel name, stream title, viewer count and the newest chat message. Works without any account in the keyless mode (DecAPI for Twitch, the public live page for YouTube) or with the official APIs for full stability and YouTube chat. Each placeholder picks its own platform - Twitch, YouTube or rotating on a timer.",
+  "summary": "Twitch/YouTube name, title, viewers and chat - keyless or via the official APIs.",
+  "Github": "github.com/yakuda-stack",
+  "main": "main.py",
+  "image": "logo.png",
+  "enabled": true,
+  "is_linux": true,
+  "is_windows": true,
+  "template": "🔴 {s_name} | {s_viewer} \\n {s_status}",
+  "placeholders": {
+    "s_name": "channel name of the platform currently shown",
+    "s_status": "stream title, category or uptime",
+    "s_viewer": "concurrent viewers",
+    "s_chat": "newest chat message"
+  },
+  "global_placeholders": [
+    "s_name",
+    "s_status",
+    "s_viewer",
+    "s_chat"
+  ],
+  "settings": [
+    {
+      "key": "g_twitch",
+      "type": "group",
+      "label": "Twitch",
+      "hint": "Everything about the Twitch side",
+      "items": [
+        {
+          "key": "tw_enable",
+          "type": "bool",
+          "label": "Twitch enabled",
+          "default": false,
+          "hint": "Nothing is fetched from Twitch while this is off"
+        },
+        {
+          "key": "tw_channel",
+          "type": "text",
+          "label": "Channel",
+          "default": "",
+          "hint": "The name from twitch.tv/<name>",
+          "depends": "tw_enable"
+        },
+        {
+          "key": "tw_mode",
+          "type": "choice",
+          "label": "Data source",
+          "default": "keyless",
+          "choices": [
+            {
+              "value": "keyless",
+              "label": "Keyless (DecAPI)"
+            },
+            {
+              "value": "official",
+              "label": "Official Twitch API"
+            }
+          ],
+          "hint": "Keyless needs no account. The official API is faster and does not depend on a third party.",
+          "depends": "tw_enable"
+        },
+        {
+          "key": "tw_client_id",
+          "type": "text",
+          "label": "Client-ID",
+          "default": "",
+          "secret": true,
+          "hint": "dev.twitch.tv -> Your Console -> Applications -> Register",
+          "depends": "tw_mode",
+          "depends_value": "official"
+        },
+        {
+          "key": "tw_client_secret",
+          "type": "text",
+          "label": "Client-Secret",
+          "default": "",
+          "secret": true,
+          "hint": "Stored in plain text in the plugin's config.json - use an app of your own, never someone else's secret",
+          "depends": "tw_mode",
+          "depends_value": "official"
+        },
+        {
+          "key": "tw_status",
+          "type": "choice",
+          "label": "What {s_status} shows",
+          "default": "title",
+          "choices": [
+            {
+              "value": "title",
+              "label": "Stream title"
+            },
+            {
+              "value": "game",
+              "label": "Category / game"
+            },
+            {
+              "value": "uptime",
+              "label": "Uptime"
+            }
+          ],
+          "depends": "tw_enable"
+        },
+        {
+          "key": "tw_chat",
+          "type": "bool",
+          "label": "Read chat  –  {s_chat}",
+          "default": false,
+          "hint": "Anonymous read-only IRC login, no account and no token needed",
+          "depends": "tw_enable"
+        }
+      ]
+    },
+    {
+      "key": "g_youtube",
+      "type": "group",
+      "label": "YouTube",
+      "hint": "Everything about the YouTube side",
+      "items": [
+        {
+          "key": "yt_enable",
+          "type": "bool",
+          "label": "YouTube enabled",
+          "default": false,
+          "hint": "Nothing is fetched from YouTube while this is off"
+        },
+        {
+          "key": "yt_channel",
+          "type": "text",
+          "label": "Channel",
+          "default": "",
+          "hint": "@handle or the UC... channel id",
+          "depends": "yt_enable"
+        },
+        {
+          "key": "yt_mode",
+          "type": "choice",
+          "label": "Data source",
+          "default": "keyless",
+          "choices": [
+            {
+              "value": "keyless",
+              "label": "Keyless (live page)"
+            },
+            {
+              "value": "official",
+              "label": "Official YouTube API"
+            }
+          ],
+          "hint": "Keyless reads the public live page. The chat needs the official API.",
+          "depends": "yt_enable"
+        },
+        {
+          "key": "yt_api_key",
+          "type": "text",
+          "label": "API key",
+          "default": "",
+          "secret": true,
+          "hint": "Google Cloud console -> YouTube Data API v3 -> Credentials. 10.000 quota units per day are plenty for one channel.",
+          "depends": "yt_mode",
+          "depends_value": "official"
+        },
+        {
+          "key": "yt_status",
+          "type": "choice",
+          "label": "What {s_status} shows",
+          "default": "title",
+          "choices": [
+            {
+              "value": "title",
+              "label": "Stream title"
+            },
+            {
+              "value": "uptime",
+              "label": "Uptime"
+            }
+          ],
+          "depends": "yt_enable"
+        },
+        {
+          "key": "yt_chat",
+          "type": "bool",
+          "label": "Read chat  –  {s_chat}",
+          "default": false,
+          "hint": "Only works in the official API mode - the live chat is not part of the public page",
+          "depends": "yt_enable"
+        }
+      ]
+    },
+    {
+      "key": "g_rotate",
+      "type": "group",
+      "label": "Rotation",
+      "items": [
+        {
+          "key": "rotate",
+          "type": "bool",
+          "label": "Rotate between the platforms",
+          "default": true,
+          "hint": "Only affects the placeholders set to 'rotating' below"
+        },
+        {
+          "key": "rotate_secs",
+          "type": "int",
+          "label": "Seconds per platform",
+          "default": 30,
+          "min": 10,
+          "max": 3600,
+          "hint": "10 seconds is the lowest the chatbox rate limit tolerates",
+          "depends": "rotate"
+        }
+      ]
+    },
+    {
+      "key": "g_sources",
+      "type": "group",
+      "label": "Placeholder sources",
+      "expanded": true,
+      "hint": "Which platform feeds which placeholder",
+      "items": [
+        {
+          "key": "src_name",
+          "type": "choice",
+          "label": "{s_name}",
+          "default": "rotate",
+          "choices": [
+            {
+              "value": "rotate",
+              "label": "Rotating"
+            },
+            {
+              "value": "twitch",
+              "label": "Twitch only"
+            },
+            {
+              "value": "youtube",
+              "label": "YouTube only"
+            },
+            {
+              "value": "off",
+              "label": "Off"
+            }
+          ]
+        },
+        {
+          "key": "src_status",
+          "type": "choice",
+          "label": "{s_status}",
+          "default": "rotate",
+          "choices": [
+            {
+              "value": "rotate",
+              "label": "Rotating"
+            },
+            {
+              "value": "twitch",
+              "label": "Twitch only"
+            },
+            {
+              "value": "youtube",
+              "label": "YouTube only"
+            },
+            {
+              "value": "off",
+              "label": "Off"
+            }
+          ]
+        },
+        {
+          "key": "src_viewer",
+          "type": "choice",
+          "label": "{s_viewer}",
+          "default": "rotate",
+          "choices": [
+            {
+              "value": "rotate",
+              "label": "Rotating"
+            },
+            {
+              "value": "twitch",
+              "label": "Twitch only"
+            },
+            {
+              "value": "youtube",
+              "label": "YouTube only"
+            },
+            {
+              "value": "off",
+              "label": "Off"
+            }
+          ]
+        },
+        {
+          "key": "src_chat",
+          "type": "choice",
+          "label": "{s_chat}",
+          "default": "rotate",
+          "choices": [
+            {
+              "value": "rotate",
+              "label": "Rotating"
+            },
+            {
+              "value": "twitch",
+              "label": "Twitch only"
+            },
+            {
+              "value": "youtube",
+              "label": "YouTube only"
+            },
+            {
+              "value": "off",
+              "label": "Off"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "key": "g_display",
+      "type": "group",
+      "label": "Display & timing",
+      "items": [
+        {
+          "key": "poll_secs",
+          "type": "int",
+          "label": "Update interval",
+          "default": 30,
+          "min": 10,
+          "max": 900,
+          "hint": "How often the live data is fetched. Lower is not better - the values barely change."
+        },
+        {
+          "key": "viewer_icon",
+          "type": "text",
+          "label": "Viewer icon",
+          "default": "👁",
+          "hint": "Prefix in front of the viewer count, empty for none"
+        },
+        {
+          "key": "offline_text",
+          "type": "text",
+          "label": "Text while offline",
+          "default": "",
+          "hint": "Shown as {s_status} while nothing is live. Empty means the placeholders simply disappear from the line."
+        },
+        {
+          "key": "name_max",
+          "type": "slider",
+          "label": "Name length",
+          "default": 24,
+          "min": 4,
+          "max": 64,
+          "suffix": " chars"
+        },
+        {
+          "key": "status_max",
+          "type": "slider",
+          "label": "Status length",
+          "default": 40,
+          "min": 8,
+          "max": 120,
+          "suffix": " chars"
+        },
+        {
+          "key": "chat_author",
+          "type": "bool",
+          "label": "Show the chat author",
+          "default": true
+        },
+        {
+          "key": "chat_max",
+          "type": "slider",
+          "label": "Chat length",
+          "default": 60,
+          "min": 10,
+          "max": 140,
+          "suffix": " chars"
+        }
+      ]
+    }
+  ]
+}

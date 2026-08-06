@@ -1,9 +1,9 @@
 {
   "name": "OSCLeash",
   "id": "oscleash",
-  "version": "2.1.0",
-  "author": "yakuda",
-  "description": "Runs ZenithVal's OSCLeash from inside the chatbox - and ships it: the plugin folder already contains OSCLeash and the two libraries it needs, so there is nothing to install, no AUR package, no AppImage and no chmod, on Windows exactly as on Linux. Every leash gets its own process, its own generated Config.json, a Start/Stop button and its own Debug console, so a second leash with its own compass no longer means a second terminal window. The panel adds leashes with the + button, warns about port collisions and switches OSCQuery on where VRChat needs it. On top of that the leash state becomes chatbox placeholders: which leash is being pulled and in which direction. OSCLeash itself is MIT licensed and unmodified apart from one documented import change - see vendor/VENDOR.md.",
+  "version": "2.1.1",
+  "author": "yakuda and Runs ZenithVal's",
+  "description": "Integrates ZenithVal's original OSCLeash directly into the chatbox for Windows and Linux—out of the box, with multi-leash process management, port collision warnings, and chatbox placeholders for leash state and direction.",
   "summary": "OSCLeash included - start, stop and debug any number of leashes, plus placeholders for the chatbox.",
   "Github": "github.com/yakuda-stack",
   "main": "main.py",

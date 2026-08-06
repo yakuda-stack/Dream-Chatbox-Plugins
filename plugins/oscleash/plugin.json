@@ -1,0 +1,102 @@
+{
+  "name": "OSCLeash",
+  "id": "oscleash",
+  "version": "2.1.0",
+  "author": "yakuda",
+  "description": "Runs ZenithVal's OSCLeash from inside the chatbox - and ships it: the plugin folder already contains OSCLeash and the two libraries it needs, so there is nothing to install, no AUR package, no AppImage and no chmod, on Windows exactly as on Linux. Every leash gets its own process, its own generated Config.json, a Start/Stop button and its own Debug console, so a second leash with its own compass no longer means a second terminal window. The panel adds leashes with the + button, warns about port collisions and switches OSCQuery on where VRChat needs it. On top of that the leash state becomes chatbox placeholders: which leash is being pulled and in which direction. OSCLeash itself is MIT licensed and unmodified apart from one documented import change - see vendor/VENDOR.md.",
+  "summary": "OSCLeash included - start, stop and debug any number of leashes, plus placeholders for the chatbox.",
+  "Github": "github.com/yakuda-stack",
+  "main": "main.py",
+  "image": "logo.png",
+  "enabled": false,
+  "is_linux": true,
+  "is_windows": true,
+  "template": "🐕 {oscleash_name} {oscleash_dir}",
+  "placeholders": {
+    "state": "pulled, or ready when nothing is being pulled",
+    "dir": "direction arrow of the pull",
+    "compass": "the same direction as N / NE / E …",
+    "name": "name of the leash being pulled",
+    "count": "how many OSCLeash instances are running"
+  },
+  "settings": [
+    {
+      "key": "panel",
+      "type": "bool",
+      "label": "🎛 Control panel in its own window",
+      "default": false,
+      "hint": "Only needed on an app version that cannot show the panel inside this card. Where it can, the panel is already above and this stays off."
+    },
+    {
+      "key": "binary",
+      "type": "path",
+      "label": "OSCLeash override",
+      "default": "",
+      "hint": "Empty = the OSCLeash bundled with this plugin, which is what almost everyone wants. Only fill this in to run your own build instead: a checkout's OSCLeash.py, an AppImage or the OSCLeash.exe from the releases page.",
+      "mode": "file",
+      "placeholder": "bundled copy",
+      "filters": [
+        "OSCLeash (OSCLeash OSCLeash.py OSCLeash*.AppImage OSCLeash*.appimage OSCLeash.exe OSCLeash-*)",
+        "AppImage (*.AppImage *.appimage)",
+        "Programs (*.exe)",
+        "Python (*.py)"
+      ]
+    },
+    {
+      "key": "autostart",
+      "type": "bool",
+      "label": "Start leashes with the app",
+      "default": true,
+      "hint": "Starts every instance that has 'Start with the app' ticked in the panel. Instances without that tick stay manual."
+    },
+    {
+      "key": "stop_on_exit",
+      "type": "bool",
+      "label": "Stop everything when the plugin stops",
+      "default": true,
+      "hint": "Off leaves the processes running after the chatbox closes - useful while testing, risky otherwise: the next start would spawn a duplicate on the same port."
+    },
+    {
+      "key": "restart_on_crash",
+      "type": "bool",
+      "label": "Restart a crashed instance",
+      "default": true,
+      "hint": "Brings an instance back a few seconds after it exited on its own. A Stop you pressed yourself is never overruled."
+    },
+    {
+      "key": "show_ready",
+      "type": "bool",
+      "label": "Show a line while idle",
+      "default": false,
+      "hint": "Off means the chatbox only says something while a leash is actually being pulled."
+    },
+    {
+      "key": "ready_text",
+      "type": "text",
+      "label": "Idle text",
+      "default": "leash ready",
+      "hint": "Shown while at least one instance runs and nothing is pulled.",
+      "depends": "show_ready"
+    },
+    {
+      "key": "icon",
+      "type": "emoji",
+      "label": "Icon",
+      "default": "🐕",
+      "hint": "Sits in front of the line. The button next to it opens the app's icon picker; empty for no icon.",
+      "placeholder": "none"
+    },
+    {
+      "key": "idle_secs",
+      "type": "slider",
+      "label": "Hold the pull for",
+      "default": 3,
+      "min": 1,
+      "max": 30,
+      "suffix": " s",
+      "hint": "How long a pull keeps showing after the last movement. Too short and the line flickers while walking, too long and it lies."
+    }
+  ],
+  "api": 2,
+  "min_app": "v1.3.2"
+}

@@ -1,0 +1,170 @@
+{
+  "name": "Example Template",
+  "id": "example_template",
+  "version": "1.0.0",
+  "author": "yakuda",
+  "description": "A working plugin that shows every part of the plugin API at once: all setting types, all hooks, placeholders, and a custom widget. Enable it, open its Settings, and every control below is live - the labels update, the buttons do something, the log in the panel says which hook fired when. Copy the folder, rename it, delete what you don't need.",
+  "summary": "Copy this folder to start a plugin. Every setting type and every hook, live.",
+  "Github": "github.com/yakuda-stack",
+  "main": "main.py",
+  "image": "logo.png",
+  "enabled": false,
+  "api": 2,
+  "min_app": "v1.3.2",
+  "is_linux": true,
+  "is_windows": true,
+  "template": "{example_template_mood} {example_template_count}",
+  "placeholders": {
+    "mood": "whatever the Mood dropdown is set to",
+    "count": "how often on_tick has fired",
+    "ticking": "only present while Count ticks is on"
+  },
+  "settings": [
+    {
+      "key": "intro",
+      "type": "label",
+      "label": "What this is",
+      "default": "Every row below is one setting type. Hover any of them for the hint text.",
+      "hint": "A 'label' row is read-only. Its text is an option value, so api.set() can rewrite it at runtime - see the Status row further down."
+    },
+    {
+      "key": "enabled_demo",
+      "type": "bool",
+      "label": "A checkbox  (type: bool)",
+      "default": true,
+      "hint": "The plain on/off row. Other rows can hang off it with \"depends\"."
+    },
+    {
+      "key": "name",
+      "type": "text",
+      "label": "A text field  (type: text)",
+      "default": "hello",
+      "hint": "Free text. Add \"secret\": true to mask it - shoulder-surfing protection only, it is still plain text in config.json.",
+      "depends": "enabled_demo"
+    },
+    {
+      "key": "mood",
+      "type": "choice",
+      "label": "A dropdown  (type: choice)",
+      "default": "curious",
+      "hint": "The stored value is always one of the \"value\" strings, never the label. A plain list of strings works too, then value == label.",
+      "choices": [
+        { "value": "curious", "label": "\ud83e\udd14 curious" },
+        { "value": "happy", "label": "\ud83d\ude03 happy" },
+        { "value": "sleepy", "label": "\ud83d\ude34 sleepy" }
+      ]
+    },
+    {
+      "key": "sleepy_note",
+      "type": "label",
+      "label": "",
+      "default": "You picked sleepy. This row only exists to show depends_value.",
+      "hint": "Shown only while the dropdown above is on a specific value.",
+      "depends": "mood",
+      "depends_value": "sleepy"
+    },
+    {
+      "key": "amount",
+      "type": "int",
+      "label": "A number  (type: int)",
+      "default": 5,
+      "min": 1,
+      "max": 100,
+      "suffix": " items",
+      "hint": "A spinbox. \"suffix\" is cosmetic, the stored value is the number."
+    },
+    {
+      "key": "level",
+      "type": "slider",
+      "label": "A slider  (type: slider)",
+      "default": 40,
+      "min": 0,
+      "max": 100,
+      "suffix": " %",
+      "hint": "Same value range as int, different feel. Use it when the exact number matters less than the direction."
+    },
+    {
+      "key": "icon",
+      "type": "emoji",
+      "label": "An icon  (type: emoji)",
+      "default": "\u2728",
+      "hint": "A text field with the app's own icon picker behind the button."
+    },
+    {
+      "key": "folder",
+      "type": "path",
+      "label": "A path  (type: path)",
+      "default": "",
+      "mode": "dir",
+      "placeholder": "pick a folder",
+      "hint": "Set \"mode\" to \"file\" for a file picker, and \"filters\" for the file types. The dialog is the native one on Windows and the platform one on Linux."
+    },
+    {
+      "key": "status",
+      "type": "label",
+      "label": "Status",
+      "default": "not running",
+      "hint": "This one is rewritten by the plugin with api.set() - press a button below and watch it change."
+    },
+    {
+      "key": "ping",
+      "type": "action",
+      "label": "A button  (type: action)",
+      "button": "Say hello",
+      "hint": "Pressing this calls on_action(\"ping\"). Whatever the hook returns is shown next to the button."
+    },
+    {
+      "key": "advanced",
+      "type": "group",
+      "label": "A collapsible group  (type: group)",
+      "expanded": false,
+      "hint": "Groups hold other settings, including one more level of groups. They start collapsed unless \"expanded\": true.",
+      "items": [
+        {
+          "key": "tick_count",
+          "type": "bool",
+          "label": "Count ticks",
+          "default": false,
+          "hint": "Switches the {example_template_count} placeholder on. Also shows that a setting inside a group is addressed exactly like one outside - keys are unique across the whole schema."
+        },
+        {
+          "key": "tick_note",
+          "type": "label",
+          "label": "",
+          "default": "on_tick() runs once per chatbox frame, before the values are collected.",
+          "depends": "tick_count"
+        },
+        {
+          "key": "nested",
+          "type": "group",
+          "label": "One level deeper",
+          "expanded": false,
+          "items": [
+            {
+              "key": "deep_text",
+              "type": "text",
+              "label": "Still just a setting",
+              "default": "two levels is the limit",
+              "hint": "A third level would be kept as a locked row rather than dropped, so nothing disappears silently."
+            }
+          ]
+        },
+        {
+          "key": "reset",
+          "type": "action",
+          "label": "Everything back to default",
+          "button": "Reset",
+          "style": "danger",
+          "hint": "\"style\" is normal | primary | danger. Use danger for anything that destroys something."
+        }
+      ]
+    },
+    {
+      "key": "from_the_future",
+      "type": "hologram",
+      "label": "A type this app does not know",
+      "default": "kept anyway",
+      "hint": "There is no \"hologram\" type. The row is deliberately here to show what happens: it is kept, its value stays readable through api.get(), and the UI says which version it would need. Delete this row in your own plugin."
+    }
+  ]
+}

@@ -1,0 +1,282 @@
+{
+  "name": "Social Media",
+  "id": "social_media",
+  "version": "1.0.0",
+  "author": "yakuda",
+  "description": "Your handles in the chatbox: Discord, TikTok, Spotify and Instagram - each one switchable on its own. Discord can additionally show the server and the voice channel you are sitting in right now, read live from the local Discord RPC socket (needs a Discord application of your own, no bot and no data leaves your machine except the one-time login). Everything else is plain text you type in once. All entries can rotate on a timer so the line stays short.",
+  "summary": "Discord (live server/voice channel), TikTok, Spotify and Instagram handles - each switchable.",
+  "Github": "github.com/yakuda-stack",
+  "main": "main.py",
+  "image": "logo.png",
+  "enabled": true,
+  "is_linux": true,
+  "is_windows": true,
+  "template": "🌐 {sm_social}",
+  "placeholders": {
+    "sm_social": "one enabled network at a time (rotating)",
+    "sm_discord": "Discord name, or server and voice channel while live",
+    "sm_guild": "Discord server you are connected to",
+    "sm_channel": "Discord voice channel you are sitting in",
+    "sm_tiktok": "TikTok handle",
+    "sm_spotify": "Spotify name",
+    "sm_instagram": "Instagram handle"
+  },
+  "global_placeholders": [
+    "sm_social",
+    "sm_discord",
+    "sm_guild",
+    "sm_channel",
+    "sm_tiktok",
+    "sm_spotify",
+    "sm_instagram"
+  ],
+  "settings": [
+    {
+      "key": "g_discord",
+      "type": "group",
+      "label": "Discord",
+      "expanded": true,
+      "hint": "Just the name, or the server and voice channel you are in right now",
+      "items": [
+        {
+          "key": "dc_enable",
+          "type": "bool",
+          "label": "Discord enabled  –  {sm_discord}",
+          "default": true,
+          "hint": "Nothing about Discord is shown or read while this is off"
+        },
+        {
+          "key": "dc_name",
+          "type": "text",
+          "label": "Discord name",
+          "default": "",
+          "hint": "Your username or an invite like discord.gg/xxxx",
+          "depends": "dc_enable"
+        },
+        {
+          "key": "dc_mode",
+          "type": "choice",
+          "label": "What to show",
+          "default": "manual",
+          "choices": [
+            {
+              "value": "manual",
+              "label": "Just the name"
+            },
+            {
+              "value": "live",
+              "label": "Live server / voice channel"
+            }
+          ],
+          "hint": "Live mode reads the local Discord app - the name above is used whenever you are not in a voice channel",
+          "depends": "dc_enable"
+        },
+        {
+          "key": "dc_guild",
+          "type": "bool",
+          "label": "Show server  –  {sm_guild}",
+          "default": true,
+          "depends": "dc_mode",
+          "depends_value": "live"
+        },
+        {
+          "key": "dc_channel",
+          "type": "bool",
+          "label": "Show voice channel  –  {sm_channel}",
+          "default": true,
+          "depends": "dc_mode",
+          "depends_value": "live"
+        },
+        {
+          "key": "dc_client_id",
+          "type": "text",
+          "label": "Application-ID",
+          "default": "",
+          "secret": true,
+          "hint": "discord.com/developers -> New Application -> the Application ID. Only the owner of the app can use the rpc scope, so it has to be one of yours.",
+          "depends": "dc_mode",
+          "depends_value": "live"
+        },
+        {
+          "key": "dc_client_secret",
+          "type": "text",
+          "label": "Client-Secret",
+          "default": "",
+          "secret": true,
+          "hint": "OAuth2 tab of the same app. Needed once for the login, stored in plain text in the plugin folder - never use someone else's secret.",
+          "depends": "dc_mode",
+          "depends_value": "live"
+        },
+        {
+          "key": "dc_redirect",
+          "type": "text",
+          "label": "Redirect-URI",
+          "default": "http://localhost",
+          "hint": "Add exactly this URI in the OAuth2 tab of your app - it is never opened, Discord only compares the string",
+          "depends": "dc_mode",
+          "depends_value": "live"
+        },
+        {
+          "key": "dc_poll_secs",
+          "type": "int",
+          "label": "Check interval",
+          "default": 5,
+          "min": 2,
+          "max": 60,
+          "hint": "How often the local Discord socket is asked. This never touches the internet.",
+          "depends": "dc_mode",
+          "depends_value": "live"
+        },
+        {
+          "key": "dc_sep",
+          "type": "text",
+          "label": "Server / channel separator",
+          "default": "›",
+          "hint": "Between the server and the voice channel",
+          "depends": "dc_mode",
+          "depends_value": "live"
+        },
+        {
+          "key": "dc_icon",
+          "type": "text",
+          "label": "Discord icon",
+          "default": "🎧",
+          "hint": "Prefix in front of the Discord entry, empty for none",
+          "depends": "dc_enable"
+        }
+      ]
+    },
+    {
+      "key": "g_tiktok",
+      "type": "group",
+      "label": "TikTok",
+      "items": [
+        {
+          "key": "tt_enable",
+          "type": "bool",
+          "label": "TikTok enabled  –  {sm_tiktok}",
+          "default": false
+        },
+        {
+          "key": "tt_name",
+          "type": "text",
+          "label": "TikTok name",
+          "default": "",
+          "hint": "The name from tiktok.com/@name",
+          "depends": "tt_enable"
+        },
+        {
+          "key": "tt_icon",
+          "type": "text",
+          "label": "TikTok icon",
+          "default": "🎵",
+          "depends": "tt_enable"
+        }
+      ]
+    },
+    {
+      "key": "g_spotify",
+      "type": "group",
+      "label": "Spotify",
+      "items": [
+        {
+          "key": "sp_enable",
+          "type": "bool",
+          "label": "Spotify enabled  –  {sm_spotify}",
+          "default": false
+        },
+        {
+          "key": "sp_name",
+          "type": "text",
+          "label": "Spotify name",
+          "default": "",
+          "hint": "Your profile name. The song you are playing is the media card's job, not this one.",
+          "depends": "sp_enable"
+        },
+        {
+          "key": "sp_icon",
+          "type": "text",
+          "label": "Spotify icon",
+          "default": "🎶",
+          "depends": "sp_enable"
+        }
+      ]
+    },
+    {
+      "key": "g_instagram",
+      "type": "group",
+      "label": "Instagram",
+      "items": [
+        {
+          "key": "ig_enable",
+          "type": "bool",
+          "label": "Instagram enabled  –  {sm_instagram}",
+          "default": false
+        },
+        {
+          "key": "ig_name",
+          "type": "text",
+          "label": "Instagram name",
+          "default": "",
+          "hint": "The name from instagram.com/name",
+          "depends": "ig_enable"
+        },
+        {
+          "key": "ig_icon",
+          "type": "text",
+          "label": "Instagram icon",
+          "default": "📷",
+          "depends": "ig_enable"
+        }
+      ]
+    },
+    {
+      "key": "g_display",
+      "type": "group",
+      "label": "Display & rotation",
+      "items": [
+        {
+          "key": "rotate",
+          "type": "bool",
+          "label": "Rotate the networks  –  {sm_social}",
+          "default": true,
+          "hint": "Only affects {sm_social}. Switched off it shows all enabled networks at once."
+        },
+        {
+          "key": "rotate_secs",
+          "type": "int",
+          "label": "Seconds per network",
+          "default": 20,
+          "min": 10,
+          "max": 3600,
+          "hint": "10 seconds is the lowest the chatbox rate limit tolerates",
+          "depends": "rotate"
+        },
+        {
+          "key": "at_prefix",
+          "type": "bool",
+          "label": "Put @ in front of the handles",
+          "default": true,
+          "hint": "TikTok, Instagram and the Discord name. Never for Spotify, for a pasted link or for the live server/channel."
+        },
+        {
+          "key": "sep",
+          "type": "text",
+          "label": "Separator",
+          "default": " | ",
+          "hint": "Between the networks in {social_media} and in a non-rotating {sm_social}"
+        },
+        {
+          "key": "name_max",
+          "type": "slider",
+          "label": "Entry length",
+          "default": 26,
+          "min": 6,
+          "max": 64,
+          "suffix": " chars",
+          "hint": "Longer entries are cut off - the chatbox has limited space"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,118 @@
+{
+  "name": "VR Autostart",
+  "id": "vr_autostart",
+  "version": "1.1.1",
+  "author": "yakuda",
+  "description": "Start a whole VR set from one program. The trigger is a dropdown of programs, not a process name to guess: VRChat, SteamVR, WiVRn, Monado, ALVR, SlimeVR, WlxOverlay-S, WayVR, VRCX, Steam, Resonite, ChilloutVR - each one asked the way it can actually be answered, which for WiVRn means process, IPC socket and systemd user unit, in that order. Next to the dropdown a folder button for anything not in the list: an AppImage, a .sh, a binary, an .exe - or a terminal command whose exit code answers the question. One trigger, or two that have to be running at the same time. Then any number of programs per rule, each with its own delay so a set comes up in order, picked as a file, typed as a command line, or the OSCLeash plugin, which is started through its own manager instead of as a second process. Two big buttons run the whole thing: one arms the watcher, one stops the watcher and everything it started. Nothing this plugin did not start is ever stopped.",
+  "summary": "When this program starts, start those - and one big button that stops everything again.",
+  "Github": "github.com/yakuda-stack",
+  "main": "main.py",
+  "image": "logo.png",
+  "enabled": false,
+  "api": 2,
+  "min_app": "v1.3.2",
+  "is_linux": true,
+  "is_windows": true,
+  "template": "🚀 {vr_autostart_rule} · {vr_autostart_count} running",
+  "placeholders": {
+    "state": "running while a rule is active, armed while waiting, off when stopped",
+    "rule": "name of the rule that is active right now",
+    "count": "how many programs this plugin has running",
+    "targets": "how many programs are configured in total"
+  },
+  "settings": [
+    {
+      "key": "status",
+      "type": "label",
+      "label": "Status",
+      "default": "stopped",
+      "hint": "Follows the two big buttons in the panel above."
+    },
+    {
+      "key": "arm_on_start",
+      "type": "bool",
+      "label": "Arm the autostart when the app starts",
+      "default": true,
+      "hint": "On means the watcher is already running when the chatbox opens, so a game started afterwards brings its set up on its own. Off waits for the Start button."
+    },
+    {
+      "key": "stop_on_exit",
+      "type": "bool",
+      "label": "Stop everything when the plugin stops",
+      "default": true,
+      "hint": "Off leaves the started programs running after the chatbox closes. Useful while testing, and a good way to end up with two SteamVRs otherwise."
+    },
+    {
+      "key": "restart_crashed",
+      "type": "bool",
+      "label": "Restart a program that ended by itself",
+      "default": false,
+      "hint": "Only while its trigger is still running, and only for programs this plugin started. Leave it off for anything you close by hand - an overlay you quit on purpose would come straight back."
+    },
+    {
+      "key": "poll_secs",
+      "type": "slider",
+      "label": "Check the process list every",
+      "default": 2,
+      "min": 1,
+      "max": 15,
+      "suffix": " s",
+      "hint": "How quickly a starting game is noticed. Two seconds is cheap; there is no reason to go lower unless a second matters to you."
+    },
+    {
+      "key": "line",
+      "type": "group",
+      "label": "Chatbox line",
+      "expanded": false,
+      "hint": "Everything about what this plugin says in the chatbox. It says nothing at all unless you switch it on here.",
+      "items": [
+        {
+          "key": "show_line",
+          "type": "bool",
+          "label": "Say something in the chatbox",
+          "default": false,
+          "hint": "Off means the plugin only shows up in the panel. The {vr_autostart_*} placeholders keep working either way."
+        },
+        {
+          "key": "icon",
+          "type": "emoji",
+          "label": "Icon",
+          "default": "🚀",
+          "hint": "Sits in front of the line. The button next to it opens the app's icon picker; empty for no icon.",
+          "placeholder": "none",
+          "depends": "show_line"
+        },
+        {
+          "key": "armed_text",
+          "type": "text",
+          "label": "Text while waiting",
+          "default": "autostart armed",
+          "hint": "Shown while the watcher runs and no trigger has fired.",
+          "depends": "show_line"
+        },
+        {
+          "key": "show_off",
+          "type": "bool",
+          "label": "Also say something while stopped",
+          "default": false,
+          "hint": "Off means an idle plugin leaves the chatbox alone entirely.",
+          "depends": "show_line"
+        },
+        {
+          "key": "off_text",
+          "type": "text",
+          "label": "Text while stopped",
+          "default": "autostart off",
+          "depends": "show_off"
+        }
+      ]
+    },
+    {
+      "key": "panel",
+      "type": "bool",
+      "label": "🎛 Control panel in its own window",
+      "default": false,
+      "hint": "Only needed on an app version that cannot show the panel inside this card. Where it can, the panel is already above and this stays off."
+    }
+  ]
+}

@@ -57,11 +57,39 @@ when a rule does not fire, the first question ("is the thing I am waiting
 for actually running?") is already on screen. **Check again** asks
 immediately instead of waiting for the next poll.
 
-The mode next to the trigger list decides how several triggers are read:
+### Two triggers at once
 
-* **any of them is enough** — VRChat *or* Resonite, same overlays.
-* **all of them at the same time** — WiVRn *and* VRChat, so an overlay
-  does not come up while only the runtime is warming.
+Every trigger row carries its own mode, so a rule reads as one sentence
+instead of an all-or-nothing switch:
+
+* **must run** — the rule only fires while this one is running. Two of
+  these is the usual VR case: **WiVRn and VRChat**, so the overlays do
+  not come up while only the runtime is warming, and do not stay up when
+  the game is gone and only the runtime is left. A new trigger row is a
+  *must run*, because adding a second trigger nearly always means "and
+  this one too".
+* **one of these** — counts together with every other row set the same
+  way, and one of them is enough. For the runtime that is WiVRn today and
+  SteamVR tomorrow, or for the same overlays across VRChat and Resonite.
+
+The two mix. *VRChat must run, and one of WiVRn or SteamVR* is one row on
+**must run** and two on **one of these** — the musts are all required,
+the rest count as one alternative between them. The line under the
+triggers always spells out what the rule currently means:
+
+```
+Starts when VRChat and one of (WiVRn, SteamVR) are running · still waiting for VRChat
+```
+
+It updates live, in the same rhythm as the LEDs next to the rows, and it
+names the half that is missing — which is the thing "waiting for the
+trigger" never told anyone. The rule's own status line and the log say
+the same: *WiVRn gone · stopping in 10s*, and *back before the grace ran
+out — nothing stopped* when it reappears in time.
+
+Rules written before 1.2.0 keep working untouched: the old rule-wide
+*any* becomes *one of these* on every row, *all* becomes *must run*, and
+nothing has to be re-ticked.
 
 **Then start these** — as many programs as you want, `＋ Program` for one
 more. Each one has:

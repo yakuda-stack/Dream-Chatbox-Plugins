@@ -30,7 +30,7 @@ from PyQt6.QtWidgets import (
     QVBoxLayout, QWidget)
 
 from . import procs
-from .engine import PRESETS, WATCHED
+from .engine import MODE_LABELS, MUST, ONE_OF, PRESETS, pattern_label, WATCHED
 
 IS_WINDOWS = os.name == "nt"
 POLL_MS = 600
@@ -176,6 +176,7 @@ class TriggerRow(QWidget):
         self.card = card
         self.data = data
         self._loading = True
+        self.running_now = False
 
         row = QHBoxLayout(self)
         row.setContentsMargins(0, 0, 0, 0)
@@ -184,6 +185,22 @@ class TriggerRow(QWidget):
         self.led = QLabel("\u25CF")
         self.led.setFixedWidth(14)
         row.addWidget(self.led)
+
+        self.mode_box = QComboBox()
+        self.mode_box.setFixedWidth(130)
+        for value in (MUST, ONE_OF):
+            self.mode_box.addItem(MODE_LABELS[value], value)
+        index = self.mode_box.findData(data.get("mode", MUST))
+        self.mode_box.setCurrentIndex(index if index >= 0 else 0)
+        self.mode_box.setToolTip(
+            "must run \u2013 the rule only fires while this one is "
+            "running. Two of these means both at the same time: VRChat "
+            "and WiVRn.\n\n"
+            "one of these \u2013 counts together with the other rows set "
+            "the same way, and one of them is enough. For a runtime that "
+            "may be WiVRn or SteamVR depending on the day.")
+        self.mode_box.currentIndexChanged.connect(self.on_mode_changed)
+        row.addWidget(self.mode_box)
 
         self.combo = QComboBox()
         self.combo.setMinimumWidth(210)
@@ -305,14 +322,23 @@ class TriggerRow(QWidget):
     def on_delete(self):
         self.card.remove_trigger(self)
 
+    def on_mode_changed(self, _index):
+        if self._loading:
+            return
+        self.data["mode"] = self.mode_box.currentData() or MUST
+        self.card.save()
+        self.card.sync_condition()
+
     # ----------------------------------------------------------- state
     def sync(self, snap, ignore):
         pattern = self.pattern()
         if not pattern:
+            self.running_now = False
             self.led.setStyleSheet(f"color: {GREY};")
             self.state.setText("nothing picked")
             return
         running, how = procs.probe(pattern, ignore, snap)
+        self.running_now = bool(running)
         self.led.setStyleSheet(f"color: {GREEN if running else GREY};")
         self.state.setText(how if running else "not running")
         self.state.setToolTip(f"looking for: {pattern}")
@@ -652,23 +678,13 @@ class RuleCard(QFrame):
         title.setObjectName("cardtitle")
         trig_head.addWidget(title)
 
-        self.match = QComboBox()
-        self.match.addItem("any of them is enough", "any")
-        self.match.addItem("all of them at the same time", "all")
-        self.match.setFixedWidth(220)
-        index = self.match.findData(rule.get("match"))
-        self.match.setCurrentIndex(index if index >= 0 else 0)
-        self.match.setToolTip(
-            "\u201call of them\u201d is the one people usually want for a "
-            "pair: SteamVR *and* VRChat, so an overlay does not come up "
-            "while only the runtime is warming.")
-        self.match.currentIndexChanged.connect(self.on_match)
-        trig_head.addWidget(self.match)
         trig_head.addStretch()
 
         self.btn_trig = _button("\uFF0B  Trigger",
                                 _btn_style("#2b3a4d", BLUE, "#cfe0f5"),
-                                "One more program that has to be running", 28)
+                                "One more program that has to be running. A new row "
+                                "is a \u201cmust run\u201d, so two triggers "
+                                "mean both at the same time.", 28)
         self.btn_trig.clicked.connect(self.on_add_trigger)
         trig_head.addWidget(self.btn_trig)
         body.addLayout(trig_head)
@@ -676,6 +692,14 @@ class RuleCard(QFrame):
         self.trig_box = QVBoxLayout()
         self.trig_box.setSpacing(4)
         body.addLayout(self.trig_box)
+
+        # the rule, as a sentence, updated while you watch it. With two
+        # triggers the interesting question is never "is something
+        # running" but "which half am I still waiting for"
+        self.condition = QLabel("")
+        self.condition.setWordWrap(True)
+        self.condition.setContentsMargins(22, 0, 0, 0)
+        body.addWidget(self.condition)
 
         line = QFrame()
         line.setFrameShape(QFrame.Shape.HLine)
@@ -739,9 +763,6 @@ class RuleCard(QFrame):
 
     def on_enabled(self, on):
         self.store("enabled", bool(on))
-
-    def on_match(self, _index):
-        self.store("match", self.match.currentData() or "any")
 
     def on_toggle(self, on):
         self.body.setVisible(bool(on))
@@ -810,11 +831,43 @@ class RuleCard(QFrame):
             self.panel.remove_card(self)
 
     # ----------------------------------------------------------- state
+    def sync_condition(self):
+        """The sentence under the triggers, from what the rows just
+        probed – so it is as fresh as the LEDs next to them and does not
+        wait for the engine's next tick."""
+        must = [r for r in self.trigger_rows
+                if r.data.get("mode", MUST) == MUST and r.pattern()]
+        options = [r for r in self.trigger_rows
+                   if r.data.get("mode", MUST) == ONE_OF and r.pattern()]
+        if not must and not options:
+            self.condition.setText("No trigger picked – this rule only "
+                                   "runs when you press Run now.")
+            self.condition.setStyleSheet(f"color: {GREY};")
+            return
+
+        sentence = self.rule.condition_text()
+        missing = [pattern_label(r.pattern()) for r in must
+                   if not r.running_now]
+        if options and not any(r.running_now for r in options):
+            names = ", ".join(pattern_label(r.pattern()) for r in options)
+            missing.append(f"one of ({names})" if len(options) > 1 else names)
+
+        verb = "is" if (len(must) + (1 if options else 0)) == 1 else "are"
+        head = f"Starts when {sentence} {verb} running"
+        if missing:
+            self.condition.setText(f"{head} \u00b7 still waiting for "
+                                   f"{', '.join(missing)}")
+            self.condition.setStyleSheet(f"color: {AMBER};")
+        else:
+            self.condition.setText(f"{head} \u00b7 condition met")
+            self.condition.setStyleSheet(f"color: {GREEN};")
+
     def sync(self, snap, ignore):
         for row in self.trigger_rows:
             row.sync(snap, ignore)
         for row in self.target_rows:
             row.sync()
+        self.sync_condition()
 
         running = self.rule.running_targets()
         colour = GREY

@@ -1,28 +1,52 @@
 {
   "name": "World Stats",
   "id": "world_stats",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "author": "yakuda",
-  "description": "Live VRChat info: players in your instance, the world name and your local clock. Reads VRChat's output_log - Steam/Proton prefix on Linux, AppData\\\\LocalLow on Windows - and needs no extra tools.",
-  "summary": "Players in your instance, the world name and your local clock.",
+  "description": "Three things your chatbox line usually wants and VRChat does not send over OSC. Instance info: how many players are around you, the world name and the access type, read from VRChat's output_log - Steam/Proton prefix on Linux, AppData\\\\LocalLow on Windows - with no extra tools. Two session counters: how long you have been in the current instance and how long you have been in VR this session, both taken from the log's own timestamps so they keep counting when the chatbox is restarted mid-session. A clock that stands on its own: it has no connection to the log watcher and keeps running when VRChat is closed or the whole instance half is switched off, with an optional date, weekday and a second time zone for friends abroad. And your headset battery, read either over adb from the headset itself - Quest, Pico, Vive Focus, no matter whether you stream with WiVRn, ALVR or nothing at all - or over SteamVR/OpenVR, which also covers controllers and trackers. Every part can be used without the other two.",
+  "summary": "Players, world and instance type, a standalone clock, and headset/controller battery.",
   "Github": "github.com/yakuda-stack",
   "main": "main.py",
   "enabled": true,
+  "api": 2,
+  "min_app": "v1.3.2",
   "is_linux": true,
   "is_windows": true,
   "image": "logo.png",
-  "template": "{player_in_world} {group_world} \\n {realtime}",
+  "template": "{player_in_world} {group_world} \\n {realtime} {hmd_battery}",
   "placeholders": {
     "player_in_world": "number of players in the instance",
     "group_world": "world name",
     "instance_type": "Public / Friends+ / Invite …",
-    "realtime": "your local clock"
+    "world_time": "how long you have been in this instance",
+    "vr_time": "how long VRChat has been running",
+    "realtime": "your local clock",
+    "realdate": "today's date",
+    "realday": "the weekday, short",
+    "realtime_alt": "the clock in a second time zone",
+    "hmd_battery": "headset charge, icon + percent",
+    "hmd_battery_raw": "headset charge, the bare number",
+    "hmd_battery_icon": "just the icon, charging aware",
+    "hmd_battery_bar": "headset charge as ▰▰▰▱▱",
+    "controller_battery": "controller charge, left and right",
+    "tracker_battery": "the emptiest tracker"
   },
   "global_placeholders": [
     "player_in_world",
     "group_world",
     "instance_type",
-    "realtime"
+    "world_time",
+    "vr_time",
+    "realtime",
+    "realdate",
+    "realday",
+    "realtime_alt",
+    "hmd_battery",
+    "hmd_battery_raw",
+    "hmd_battery_icon",
+    "hmd_battery_bar",
+    "controller_battery",
+    "tracker_battery"
   ],
   "settings": [
     {
@@ -38,24 +62,12 @@
       "default": true
     },
     {
-      "key": "clock",
-      "type": "bool",
-      "label": "Local time  –  {realtime}",
-      "default": true
-    },
-    {
       "key": "player_icon",
-      "type": "text",
+      "type": "emoji",
       "label": "Player icon",
       "default": "👥",
-      "hint": "Prefix in front of the player count, empty for none"
-    },
-    {
-      "key": "clock_format",
-      "type": "text",
-      "label": "Clock format",
-      "default": "%H:%M",
-      "hint": "strftime, e.g. %H:%M (21:45) or %I:%M %p (09:45 PM)"
+      "hint": "Prefix in front of the player count, empty for none",
+      "depends": "players"
     },
     {
       "key": "world_max",
@@ -69,11 +81,328 @@
       "depends": "world"
     },
     {
+      "key": "timer_group",
+      "type": "group",
+      "label": "Session time",
+      "expanded": false,
+      "hint": "Both counters are read out of the log's own timestamps, not measured with a stopwatch started here - restart the chatbox in the middle of a session and they carry on where they were instead of jumping back to zero.",
+      "items": [
+        {
+          "key": "world_time",
+          "type": "bool",
+          "label": "Time in this world  –  {world_time}",
+          "default": false,
+          "hint": "Counts from the moment you joined the instance and resets when you leave. Empty while you are not in a world."
+        },
+        {
+          "key": "world_time_icon",
+          "type": "emoji",
+          "label": "World timer icon",
+          "default": "⏱",
+          "depends": "world_time"
+        },
+        {
+          "key": "vr_time",
+          "type": "bool",
+          "label": "Time in VR  –  {vr_time}",
+          "default": false,
+          "hint": "The long one: how far into this session you are, across every world you have been through."
+        },
+        {
+          "key": "vr_time_source",
+          "type": "choice",
+          "label": "Counted from",
+          "default": "vrchat",
+          "hint": "VRChat is the honest answer to \"how long have I been in VR\" - it is the first line of the current log file, so it survives an app restart. The other one is a plain stopwatch and only matches your session if you started the chatbox first.",
+          "depends": "vr_time",
+          "choices": [
+            { "value": "vrchat", "label": "VRChat launch  –  from the log" },
+            { "value": "app", "label": "This app starting" }
+          ]
+        },
+        {
+          "key": "vr_time_icon",
+          "type": "emoji",
+          "label": "VR timer icon",
+          "default": "🥽",
+          "depends": "vr_time"
+        },
+        {
+          "key": "time_format",
+          "type": "choice",
+          "label": "How to write it",
+          "default": "auto",
+          "choices": [
+            { "value": "auto", "label": "2h 05m  ·  40m  ·  12s" },
+            { "value": "clock", "label": "2:05" },
+            { "value": "minutes", "label": "125m" }
+          ]
+        },
+        {
+          "key": "time_min",
+          "type": "slider",
+          "label": "Only show after",
+          "default": 1,
+          "min": 0,
+          "max": 60,
+          "suffix": " min",
+          "hint": "Below this the placeholder stays empty instead of announcing that you have been here for zero minutes. Set it to 0 to always show it."
+        }
+      ]
+    },
+    {
+      "key": "clock_group",
+      "type": "group",
+      "label": "Clock",
+      "expanded": true,
+      "hint": "Completely independent of the two rows above. The clock needs no log file, no VRChat and no headset - switch players and world name off and this keeps running on its own.",
+      "items": [
+        {
+          "key": "clock",
+          "type": "bool",
+          "label": "Local time  –  {realtime}",
+          "default": true
+        },
+        {
+          "key": "clock_format",
+          "type": "text",
+          "label": "Clock format",
+          "default": "%H:%M",
+          "hint": "strftime, e.g. %H:%M (21:45) or %I:%M %p (09:45 PM)",
+          "depends": "clock"
+        },
+        {
+          "key": "clock_tz",
+          "type": "text",
+          "label": "Time zone",
+          "default": "",
+          "placeholder": "empty = your system time",
+          "hint": "An IANA name like Europe/Berlin or America/New_York. Leave empty to follow the system clock. On Windows this needs the tzdata package; if a zone cannot be loaded the plugin falls back to local time and says so in the log.",
+          "depends": "clock"
+        },
+        {
+          "key": "clock_date",
+          "type": "bool",
+          "label": "Also date and weekday  –  {realdate} {realday}",
+          "default": false,
+          "depends": "clock"
+        },
+        {
+          "key": "date_format",
+          "type": "text",
+          "label": "Date format",
+          "default": "%d.%m.",
+          "hint": "strftime again, e.g. %d.%m. (24.08.) or %b %d (Aug 24)",
+          "depends": "clock_date"
+        },
+        {
+          "key": "clock_alt",
+          "type": "bool",
+          "label": "Second time zone  –  {realtime_alt}",
+          "default": false,
+          "hint": "A second clock next to yours - handy when the people you talk to are in another country.",
+          "depends": "clock"
+        },
+        {
+          "key": "alt_tz",
+          "type": "text",
+          "label": "Second zone",
+          "default": "America/New_York",
+          "hint": "IANA name, same as above",
+          "depends": "clock_alt"
+        },
+        {
+          "key": "alt_format",
+          "type": "text",
+          "label": "Second zone format",
+          "default": "%H:%M",
+          "depends": "clock_alt"
+        },
+        {
+          "key": "alt_label",
+          "type": "text",
+          "label": "Second zone prefix",
+          "default": "NY",
+          "hint": "Written in front of the second clock, empty for none",
+          "depends": "clock_alt"
+        }
+      ]
+    },
+    {
+      "key": "battery_group",
+      "type": "group",
+      "label": "Headset battery",
+      "expanded": false,
+      "hint": "Also independent of the rest - it works outside a world and outside VRChat.",
+      "items": [
+        {
+          "key": "battery",
+          "type": "bool",
+          "label": "Battery  –  {hmd_battery}",
+          "default": false,
+          "hint": "Off means off: no adb process and no OpenVR session are kept alive while this is unchecked."
+        },
+        {
+          "key": "battery_status",
+          "type": "label",
+          "label": "Status",
+          "default": "off",
+          "hint": "Written by the plugin - which backend answered, which headset, and what it reads."
+        },
+        {
+          "key": "battery_detect",
+          "type": "action",
+          "label": "Read the battery once, now",
+          "button": "Read now",
+          "hint": "Skips the wait for the next poll. The answer lands in the Status row above.",
+          "depends": "battery"
+        },
+        {
+          "key": "battery_source",
+          "type": "choice",
+          "label": "Where to read it from",
+          "default": "auto",
+          "hint": "Auto tries SteamVR first and falls back to adb, which is the right order for a wired setup. Pin it to adb if you stream to a standalone headset - that skips a pointless OpenVR probe every poll.",
+          "depends": "battery",
+          "choices": [
+            { "value": "auto", "label": "Auto  –  try both" },
+            { "value": "adb", "label": "adb  –  standalone headset" },
+            { "value": "openvr", "label": "SteamVR / OpenVR" }
+          ]
+        },
+        {
+          "key": "battery_interval",
+          "type": "slider",
+          "label": "Read every",
+          "default": 60,
+          "min": 15,
+          "max": 600,
+          "suffix": " s",
+          "hint": "A battery moves by one percent every few minutes, so there is nothing to gain below a minute - and adb costs a process each time.",
+          "depends": "battery"
+        },
+        {
+          "key": "battery_show_below",
+          "type": "slider",
+          "label": "Only show below",
+          "default": 100,
+          "min": 5,
+          "max": 100,
+          "suffix": " %",
+          "hint": "Leave at 100 to always show it. Lower it and the placeholder stays empty while the headset is still full - the chatbox gets those characters back for something worth saying.",
+          "depends": "battery"
+        },
+        {
+          "key": "battery_icon",
+          "type": "emoji",
+          "label": "Battery icon",
+          "default": "🔋",
+          "depends": "battery"
+        },
+        {
+          "key": "battery_charge_icon",
+          "type": "emoji",
+          "label": "Charging icon",
+          "default": "⚡",
+          "hint": "Replaces the icon above while the headset is on the cable, empty to keep the same icon either way",
+          "depends": "battery"
+        },
+        {
+          "key": "battery_controllers",
+          "type": "bool",
+          "label": "Controllers and trackers too  –  {controller_battery} {tracker_battery}",
+          "default": true,
+          "hint": "SteamVR only. Android does not know anything about the controllers, so this stays empty on the adb backend.",
+          "depends": "battery"
+        },
+        {
+          "key": "controller_icon",
+          "type": "emoji",
+          "label": "Controller icon",
+          "default": "🎮",
+          "depends": "battery_controllers"
+        },
+        {
+          "key": "tracker_icon",
+          "type": "emoji",
+          "label": "Tracker icon",
+          "default": "📍",
+          "hint": "The tracker placeholder shows the emptiest tracker, not all of them - that is the one you want to know about.",
+          "depends": "battery_controllers"
+        },
+        {
+          "key": "adb_group",
+          "type": "group",
+          "label": "adb  –  standalone headsets",
+          "expanded": false,
+          "hint": "Quest, Pico, Vive Focus and friends. The headset has to be attached over USB or over the network, and you have to accept the USB debugging prompt inside the headset once.",
+          "items": [
+            {
+              "key": "adb_path",
+              "type": "path",
+              "label": "adb binary",
+              "default": "",
+              "mode": "file",
+              "placeholder": "empty = look on PATH",
+              "hint": "Only needed when adb is not on PATH. On Arch it comes with android-tools, on Fedora with android-tools, on Debian with adb."
+            },
+            {
+              "key": "adb_serial",
+              "type": "text",
+              "label": "Device serial",
+              "default": "",
+              "placeholder": "empty = the first one",
+              "hint": "Only matters with more than one device attached - a phone counts. The panel below lists the serials."
+            },
+            {
+              "key": "adb_connect",
+              "type": "text",
+              "label": "Wireless address",
+              "default": "",
+              "placeholder": "192.168.1.42",
+              "hint": "For reading the battery over WiFi instead of the cable. Enable wireless debugging in the headset first; port 5555 is assumed when you leave it off."
+            },
+            {
+              "key": "adb_connect_now",
+              "type": "action",
+              "label": "Connect to that address",
+              "button": "adb connect",
+              "hint": "Runs adb connect once. It stays connected until the headset reboots or leaves the network."
+            }
+          ]
+        },
+        {
+          "key": "openvr_group",
+          "type": "group",
+          "label": "SteamVR  –  controllers, trackers, wired headsets",
+          "expanded": false,
+          "hint": "Reads SteamVR's own device list. The plugin attaches as a background application, which never starts SteamVR by itself - while SteamVR is closed this backend simply reports nothing.",
+          "items": [
+            {
+              "key": "openvr_status",
+              "type": "label",
+              "label": "openvr package",
+              "default": "not checked yet"
+            },
+            {
+              "key": "battery_install_openvr",
+              "type": "action",
+              "label": "Install the openvr package",
+              "button": "Install",
+              "hint": "pip install openvr into the interpreter the app runs on. Needs an app restart afterwards. Skip this entirely if you only use the adb backend."
+            }
+          ]
+        }
+      ]
+    },
+    {
       "key": "log_dir",
-      "type": "text",
+      "type": "path",
       "label": "VRChat log folder",
       "default": "",
-      "hint": "Leave empty for auto-detect - Steam/Proton prefix on Linux, AppData\\\\LocalLow on Windows"
+      "mode": "dir",
+      "placeholder": "empty = auto-detect",
+      "hint": "Leave empty for auto-detect - Steam/Proton prefix on Linux, AppData\\\\LocalLow on Windows. Only the players/world rows use this; clock and battery do not touch it."
     }
   ]
 }

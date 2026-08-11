@@ -25,6 +25,13 @@ What we parse (all lines carry a `[Behaviour]` tag):
     - "OnPlayerLeft <name>"                   -> -1 player
     - "OnLeftRoom" / "Successfully left room" -> left the instance
 
+Each line also carries a timestamp, which is where the two session
+counters come from: the join line gives the moment you entered the
+instance, the very first line of the file gives the moment VRChat was
+launched. Both are read out of the log rather than measured with our
+own clock, so restarting the chatbox in the middle of a session does
+not reset them.
+
 Everything runs in a daemon thread (log files get large; we never touch
 the file from the GUI thread). The GUI reads a cheap snapshot() under a
 lock. Reading is incremental – only the bytes appended since the last
@@ -37,6 +44,7 @@ import re
 import threading
 import os
 import platform
+import time
 from pathlib import Path
 
 VRCHAT_APPID = "438100"
@@ -82,6 +90,27 @@ _RE_PLAYER_LEFT = re.compile(
     r"OnPlayerLeft\s+(.+?)(?:\s+\(usr_[0-9a-fA-F-]+\))?\s*$")
 _RE_LEFT_ROOM = re.compile(r"OnLeftRoom|Successfully left room")
 
+# every log line starts with "2026.08.11 05:12:33 Log        -  ..."
+_RE_TIMESTAMP = re.compile(
+    r"^(\d{4})\.(\d{2})\.(\d{2})\s+(\d{2}):(\d{2}):(\d{2})")
+
+
+def _line_time(line: str) -> float:
+    """Epoch seconds of a log line, 0.0 when it carries no timestamp.
+
+    Taken from the line rather than from the clock so that attaching to
+    a log half way through a session still reports the real elapsed
+    time - restart the app mid-session and the counters do not reset.
+    VRChat writes local time, which is what mktime expects."""
+    m = _RE_TIMESTAMP.match(line)
+    if not m:
+        return 0.0
+    y, mo, d, h, mi, s = (int(g) for g in m.groups())
+    try:
+        return time.mktime((y, mo, d, h, mi, s, 0, 0, -1))
+    except Exception:
+        return 0.0
+
 
 def _instance_type(descriptor: str) -> str:
     """Human name for the access type of an instance descriptor like
@@ -121,6 +150,8 @@ class VRChatLogWatcher:
         self._itype = ""
         self._players = set()
         self._in_world = False
+        self._joined_at = 0.0        # instance join, from the log clock
+        self._session_start = 0.0    # first line of this log = VRChat start
 
         # file tracking
         self._cur_path = None
@@ -158,6 +189,8 @@ class VRChatLogWatcher:
                 "world": self._world,
                 "instance_type": self._itype,
                 "player_count": len(self._players),
+                "joined_at": self._joined_at,
+                "session_start": self._session_start,
                 "log_dir": (str(self._cur_path.parent)
                             if self._cur_path else ""),
             }
@@ -251,6 +284,8 @@ class VRChatLogWatcher:
                 self._itype = ""
                 self._players = set()
                 self._in_world = False
+                self._joined_at = 0.0
+                self._session_start = 0.0
                 self._warned = False
 
         try:
@@ -272,6 +307,14 @@ class VRChatLogWatcher:
             self._offset = f.tell()
 
         for raw in chunk.splitlines():
+            if not self._session_start:
+                # the first timestamped line of the file is the moment
+                # VRChat was launched - any line will do, not just the
+                # [Behaviour] ones
+                stamp = _line_time(raw)
+                if stamp:
+                    with self._lock:
+                        self._session_start = stamp
             if "[Behaviour]" not in raw:
                 continue
             self._parse_line(raw)
@@ -283,12 +326,15 @@ class VRChatLogWatcher:
                 self._players = set()
                 self._itype = _instance_type(m.group(2))
                 self._in_world = True
+                self._joined_at = _line_time(line) or time.time()
             return
         m = _RE_JOIN_ROOM.search(line)
         if m:
             with self._lock:
                 self._world = m.group(1).strip()
                 self._in_world = True
+                if not self._joined_at:
+                    self._joined_at = _line_time(line) or time.time()
             return
         m = _RE_PLAYER_JOIN.search(line)
         if m:
@@ -306,3 +352,4 @@ class VRChatLogWatcher:
                 self._in_world = False
                 self._world = ""
                 self._itype = ""
+                self._joined_at = 0.0

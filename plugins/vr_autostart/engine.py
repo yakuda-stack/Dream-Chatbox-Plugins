@@ -48,9 +48,18 @@ RESTART_DELAY = 5.0
 RULE_DEFAULTS = {
     "name": "Rule",
     "enabled": True,
-    "match": "any",         # any | all
+    # kept for configs written before 1.2.0: it is read once, turned into
+    # a per-trigger mode and never used again
+    "match": "any",
     "grace": 10,            # seconds the trigger may be gone before stopping
 }
+
+# Per trigger, since 1.2.0. "must" is an AND, "one_of" is an OR across
+# every row that carries it - which is what a VR setup actually needs:
+# VRChat *and* the runtime, where the runtime may be WiVRn or SteamVR.
+MUST = "must"
+ONE_OF = "one_of"
+MODE_LABELS = {MUST: "must run", ONE_OF: "one of these"}
 
 # What people actually trigger on. The value is a ``@key`` from
 # procs.SMART rather than a process name, because a process name is a
@@ -80,11 +89,28 @@ WATCHED = (["@vrchat", "@steamvr", "@steam", "@vrcx"] if os.name == "nt"
            else ["@wivrn", "@vrchat", "@steamvr", "@monado"])
 
 
+def pattern_label(pattern):
+    """What to call a trigger in a sentence.
+
+    A ``@key`` knows its own name, a ``check:`` command is only ever
+    going to be called "the command", and anything else is what the user
+    typed - which is already the clearest thing available.
+    """
+    raw = str(pattern or "").strip()
+    if raw.startswith("@"):
+        return procs.smart_label(raw[1:])
+    if raw.lower().startswith("check:"):
+        command = raw[6:].strip()
+        return f"`{command[:28]}`" if command else "a command"
+    return raw
+
+
 def new_rule(name=""):
     data = dict(RULE_DEFAULTS)
     data["id"] = uuid.uuid4().hex[:8]
     data["name"] = name or RULE_DEFAULTS["name"]
-    data["triggers"] = [{"id": uuid.uuid4().hex[:8], "pattern": ""}]
+    data["triggers"] = [{"id": uuid.uuid4().hex[:8], "pattern": "",
+                         "mode": MUST}]
     data["targets"] = [new_target("Program 1")]
     return data
 
@@ -104,7 +130,9 @@ class Rule:
             target.link = link
         if not isinstance(self.data.get("triggers"), list):
             self.data["triggers"] = []
+        self._migrate_modes()
         self.state = "idle"          # idle | active | losing
+        self.missing = []            # labels of what is keeping it waiting
         self.lost_at = 0.0
         self.hit_at = 0.0
         self.manual = False          # started by the button, not a trigger
@@ -134,10 +162,49 @@ class Rule:
     def triggers(self):
         return [t for t in self.data.get("triggers", []) if isinstance(t, dict)]
 
-    def add_trigger(self, pattern=""):
-        row = {"id": uuid.uuid4().hex[:8], "pattern": pattern}
+    def _migrate_modes(self):
+        """Give every trigger row a mode, from the old rule-wide one.
+
+        A config written before 1.2.0 has "match": "any" or "all" on the
+        rule and nothing on the rows. Turning that into per-row modes
+        here means an existing setup keeps behaving exactly as it did,
+        and nobody has to go and re-tick anything.
+        """
+        old = ONE_OF if str(self.data.get("match", "any")) != "all" else MUST
+        for row in self.triggers:
+            if row.get("mode") not in (MUST, ONE_OF):
+                row["mode"] = old
+
+    def add_trigger(self, pattern="", mode=MUST):
+        """A new row is a "must" on purpose: adding a second trigger
+        almost always means "and this one too" - VRChat and WiVRn, not
+        VRChat or WiVRn."""
+        row = {"id": uuid.uuid4().hex[:8], "pattern": pattern, "mode": mode}
         self.data.setdefault("triggers", []).append(row)
         return row
+
+    def split(self):
+        """(must, one_of) - the patterns of both groups, empties dropped."""
+        must, options = [], []
+        for row in self.triggers:
+            pattern = str(row.get("pattern") or "").strip()
+            if not pattern:
+                continue
+            (must if row.get("mode", MUST) == MUST else options).append(pattern)
+        return must, options
+
+    def condition_text(self):
+        """The rule as a sentence, for the panel and for the log."""
+        must, options = self.split()
+        parts = [pattern_label(p) for p in must]
+        if options:
+            names = ", ".join(pattern_label(p) for p in options)
+            parts.append(f"one of ({names})" if len(options) > 1 else names)
+        if not parts:
+            return ""
+        if len(parts) == 1:
+            return parts[0]
+        return " and ".join((", ".join(parts[:-1]), parts[-1]))
 
     def remove_trigger(self, tid):
         rows = self.data.get("triggers", [])
@@ -175,16 +242,35 @@ class Rule:
     def evaluate(self, snap, ignore_pids):
         """Is the trigger condition true right now?
 
+        Every "must run" row has to be running, and – when there are any
+        – at least one "one of these" row on top. Two musts is the case
+        this exists for: VRChat *and* WiVRn, so an overlay does not come
+        up while only the runtime is warming, and does not stay up when
+        only the runtime is left.
+
+        Also records *what* is missing, because "waiting for the trigger"
+        is a useless thing to read when two of them are involved.
+
         No patterns means no trigger, which means the rule can only be
         run by hand – that is a legitimate setup ("my VR set", one
         button) and not an error.
         """
-        patterns = self.patterns()
-        if not patterns:
+        must, options = self.split()
+        if not must and not options:
+            self.missing = []
             return False
-        hits = [procs.is_running(p, ignore_pids, snap, allow_run=True)
-                for p in patterns]
-        return all(hits) if self.get("match") == "all" else any(hits)
+
+        missing = [pattern_label(p) for p in must
+                   if not procs.is_running(p, ignore_pids, snap,
+                                           allow_run=True)]
+        have_option = not options or any(
+            procs.is_running(p, ignore_pids, snap, allow_run=True)
+            for p in options)
+        if not have_option:
+            names = ", ".join(pattern_label(p) for p in options)
+            missing.append(f"one of ({names})" if len(options) > 1 else names)
+        self.missing = missing
+        return not missing
 
     def running_targets(self):
         return sum(1 for t in self.targets if t.running)
@@ -198,10 +284,29 @@ class Rule:
             how = "by hand" if self.manual else "triggered"
             return f"{how} \u00b7 {running}/{total} running"
         if self.state == "losing":
-            return f"trigger gone \u00b7 stopping soon ({running} running)"
+            gone = ", ".join(self.missing) or "the trigger"
+            left = self.grace_left()
+            return (f"{gone} gone \u00b7 stopping in {left}s"
+                    if left else f"{gone} gone \u00b7 stopping")
         if not self.patterns():
             return "no trigger \u00b7 manual only"
+        if self.missing:
+            # the whole point of naming it: with two triggers, "waiting"
+            # alone never says which half is missing
+            return "waiting for " + ", ".join(self.missing)
         return "waiting for the trigger"
+
+    def grace_secs(self):
+        try:
+            return max(0, int(self.get("grace") or 0))
+        except (TypeError, ValueError):
+            return 10
+
+    def grace_left(self):
+        if self.state != "losing" or not self.lost_at:
+            return 0
+        return max(0, int(round(self.grace_secs()
+                                - (time.time() - self.lost_at))))
 
     # --------------------------------------------------------- control
     def fire(self, manual=False):
@@ -464,12 +569,15 @@ class Engine:
         hit = rule.evaluate(snap, ignore)
         if hit:
             if rule.state == "idle":
+                count = sum(1 for t in rule.targets if t.get("enabled"))
                 rule.fire()
-                self._event(f"{rule.name}: trigger found – starting "
-                            f"{len(rule.targets)} program(s)")
+                self._event(f"{rule.name}: {rule.condition_text()} running "
+                            f"– starting {count} program(s)")
             elif rule.state == "losing":
                 # came back inside the grace window: nothing was stopped,
                 # so there is nothing to start either
+                self._event(f"{rule.name}: back before the grace ran out "
+                            f"– nothing stopped")
                 rule.state = "active"
                 rule.lost_at = 0.0
             return
@@ -477,14 +585,17 @@ class Engine:
         if rule.state == "active" and not rule.manual:
             rule.state = "losing"
             rule.lost_at = now
+            # named here rather than at the end of the grace: this is the
+            # moment it actually happened, and by the time the grace runs
+            # out a second one may be gone too
+            gone = ", ".join(rule.missing) or "the trigger"
+            self._event(f"{rule.name}: {gone} gone – stopping in "
+                        f"{rule.grace_secs()}s unless it comes back")
             return
         if rule.state == "losing":
-            try:
-                grace = max(0, int(rule.get("grace") or 0))
-            except (TypeError, ValueError):
-                grace = 10
-            if now - rule.lost_at >= grace:
-                self._event(f"{rule.name}: trigger gone – stopping")
+            if now - rule.lost_at >= rule.grace_secs():
+                gone = ", ".join(rule.missing) or "the trigger"
+                self._event(f"{rule.name}: {gone} still gone – stopping")
                 rule.release()
 
     # -------------------------------------------------------- shutdown

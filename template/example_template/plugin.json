@@ -1,10 +1,10 @@
 {
   "name": "Example Template",
   "id": "example_template",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "author": "yakuda",
   "description": "A working plugin that shows every part of the plugin API at once: all setting types, all hooks, placeholders, and a custom widget. Enable it, open its Settings, and every control below is live - the labels update, the buttons do something, the log in the panel says which hook fired when. Copy the folder, rename it, delete what you don't need.",
-  "summary": "Copy this folder to start a plugin. Every setting type and every hook, live.",
+  "short_description": "Copy this folder to start a plugin. Every setting type and every hook, live.",
   "Github": "github.com/yakuda-stack",
   "main": "main.py",
   "image": "logo.png",

@@ -11,7 +11,8 @@ fired.
    folder must match, and the id has to be `[a-z0-9_-]` because it is
    used as a python module name.
 2. In `plugin.json`: change `name`, `id`, `version`, `author`,
-   `description`, `summary`, and delete every setting you do not need.
+   `description`, `short_description`, and delete every setting you do
+   not need.
 3. In `main.py`: delete every hook you do not need. All of them are
    optional.
 4. Delete `panel.py` and `build_widget()` unless the plugin really needs
@@ -22,6 +23,24 @@ fired.
 **Never ship a `configs/` folder.** The installer keeps the existing one
 only when the archive has none; shipping one wipes every setting the
 user made on update.
+
+## The two descriptions
+
+`plugin.json` carries both, and this template shows the difference:
+
+| Key | Where it shows | How long |
+| --- | --- | --- |
+| `short_description` | the row in **Plugins → Installed** | one line |
+| `description` | the store page, and the row's tooltip | as long as it needs to be |
+
+`short_description` is optional. Without it the list falls back to
+`description`, which is why a plugin that explains itself in a paragraph
+used to make its row three lines tall. Write both: the long one for
+somebody deciding whether to install, the short one for somebody
+scrolling past twelve installed plugins.
+
+`summary` is the older spelling of `short_description` and still works —
+use one of the two, not both.
 
 ## The settings, one per type
 

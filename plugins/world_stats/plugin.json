@@ -1,9 +1,9 @@
 {
   "name": "World Stats",
   "id": "world_stats",
-  "version": "1.3.0",
+  "version": "1.4.1",
   "author": "yakuda",
-  "description": "Three things your chatbox line usually wants and VRChat does not send over OSC. Instance info: how many players are around you, the world name and the access type, read from VRChat's output_log - Steam/Proton prefix on Linux, AppData\\\\LocalLow on Windows - with no extra tools. Two session counters: how long you have been in the current instance and how long you have been in VR this session, both taken from the log's own timestamps so they keep counting when the chatbox is restarted mid-session. A clock that stands on its own: it has no connection to the log watcher and keeps running when VRChat is closed or the whole instance half is switched off, with an optional date, weekday and a second time zone for friends abroad. And your headset battery, read either over adb from the headset itself - Quest, Pico, Vive Focus, no matter whether you stream with WiVRn, ALVR or nothing at all - or over SteamVR/OpenVR, which also covers controllers and trackers. Every part can be used without the other two.",
+  "description": "Three things your chatbox line usually wants and VRChat does not send over OSC. Instance info: how many players are around you, the world name and the access type, read from VRChat's output_log - Steam/Proton prefix on Linux, AppData\\\\LocalLow on Windows - with no extra tools. Two session counters: how long you have been in the current instance and how long you have been in VR this session, both taken from the log's own timestamps so they keep counting when the chatbox is restarted mid-session. A clock that stands on its own: it has no connection to the log watcher and keeps running when VRChat is closed or the whole instance half is switched off, with an optional date, weekday and a second time zone for friends abroad. And your headset battery, read either over adb from the headset itself - Quest, Pico, Vive Focus, no matter whether you stream with WiVRn, ALVR or nothing at all - over the running OpenXR runtime itself (WiVRn/Monado, through libmonado - no adb setup, headset plus controllers plus trackers), or over SteamVR/OpenVR. Every part can be used without the other two.",
   "summary": "Players, world and instance type, a standalone clock, and headset/controller battery.",
   "Github": "github.com/yakuda-stack",
   "main": "main.py",
@@ -116,8 +116,14 @@
           "hint": "VRChat is the honest answer to \"how long have I been in VR\" - it is the first line of the current log file, so it survives an app restart. The other one is a plain stopwatch and only matches your session if you started the chatbox first.",
           "depends": "vr_time",
           "choices": [
-            { "value": "vrchat", "label": "VRChat launch  –  from the log" },
-            { "value": "app", "label": "This app starting" }
+            {
+              "value": "vrchat",
+              "label": "VRChat launch  –  from the log"
+            },
+            {
+              "value": "app",
+              "label": "This app starting"
+            }
           ]
         },
         {
@@ -133,9 +139,18 @@
           "label": "How to write it",
           "default": "auto",
           "choices": [
-            { "value": "auto", "label": "2h 05m  ·  40m  ·  12s" },
-            { "value": "clock", "label": "2:05" },
-            { "value": "minutes", "label": "125m" }
+            {
+              "value": "auto",
+              "label": "2h 05m  ·  40m  ·  12s"
+            },
+            {
+              "value": "clock",
+              "label": "2:05"
+            },
+            {
+              "value": "minutes",
+              "label": "125m"
+            }
           ]
         },
         {
@@ -262,12 +277,25 @@
           "type": "choice",
           "label": "Where to read it from",
           "default": "auto",
-          "hint": "Auto tries SteamVR first and falls back to adb, which is the right order for a wired setup. Pin it to adb if you stream to a standalone headset - that skips a pointless OpenVR probe every poll.",
+          "hint": "Auto asks the OpenXR runtime first, then SteamVR, then adb. On WiVRn the runtime already knows the headset charge, so pinning it to WiVRn/Monado saves the other two probes; pin it to adb only if you run no Linux runtime at all.",
           "depends": "battery",
           "choices": [
-            { "value": "auto", "label": "Auto  –  try both" },
-            { "value": "adb", "label": "adb  –  standalone headset" },
-            { "value": "openvr", "label": "SteamVR / OpenVR" }
+            {
+              "value": "auto",
+              "label": "Auto  –  try all of them"
+            },
+            {
+              "value": "monado",
+              "label": "WiVRn / Monado  –  OpenXR runtime"
+            },
+            {
+              "value": "adb",
+              "label": "adb  –  standalone headset"
+            },
+            {
+              "value": "openvr",
+              "label": "SteamVR / OpenVR"
+            }
           ]
         },
         {
@@ -312,7 +340,7 @@
           "type": "bool",
           "label": "Controllers and trackers too  –  {controller_battery} {tracker_battery}",
           "default": true,
-          "hint": "SteamVR only. Android does not know anything about the controllers, so this stays empty on the adb backend.",
+          "hint": "WiVRn/Monado and SteamVR only. Android knows nothing about the controllers, so this stays empty on the adb backend.",
           "depends": "battery"
         },
         {
@@ -329,6 +357,22 @@
           "default": "📍",
           "hint": "The tracker placeholder shows the emptiest tracker, not all of them - that is the one you want to know about.",
           "depends": "battery_controllers"
+        },
+        {
+          "key": "monado_group",
+          "type": "group",
+          "label": "WiVRn / Monado  –  the OpenXR runtime",
+          "expanded": false,
+          "hint": "Reads libmonado, the same library WayVR and Monado's own tools use. Nothing to install and nothing to configure: the library is found through the active_runtime.json of whichever runtime is currently active. It answers only while a session is running, and it never starts one. The library is loaded in a short-lived helper process, not in the app - if it crashes or hangs, this backend goes quiet for 30 seconds and the chatbox carries on.",
+          "items": [
+            {
+              "key": "monado_status",
+              "type": "label",
+              "label": "libmonado",
+              "default": "not checked yet",
+              "hint": "Written by the plugin: where libmonado was found, or why it was not."
+            }
+          ]
         },
         {
           "key": "adb_group",

@@ -126,8 +126,11 @@ class BatteryPanel(QWidget):
     def _list_worker(self):
         try:
             from .battery import adb_devices, find_adb
-            adb = find_adb(str(self.api.get("adb_path", "")) if self.api
-                           else "")
+            try:
+                wanted = str(self.api.get("adb_path", "")) if self.api else ""
+            except Exception:
+                wanted = ""
+            adb = find_adb(wanted)
             if not adb:
                 self._note = "adb not found \u2013 install android-tools"
                 return
@@ -142,8 +145,14 @@ class BatteryPanel(QWidget):
             self._note = f"adb failed: {e}"
 
     def on_refresh(self):
-        if self.api is not None:
-            self.api.refresh()
+        # refresh() is not in every app build - an old host loses the
+        # button, not the panel
+        fn = getattr(self.api, "refresh", None) if self.api else None
+        if callable(fn):
+            try:
+                fn()
+            except Exception:
+                pass
 
     # ------------------------------------------------------------ poll
     def sync(self):

@@ -60,30 +60,42 @@ def setup(api):
     _api = api
     _app_start = time.time()
 
+    if not _supports("api.set"):
+        # not fatal, and deliberately not an exception: everything the
+        # plugin actually produces works without it. Only the read-only
+        # Status rows stay on their default text.
+        _log("this app build has no api.set() – the plugin runs, but the "
+             "Status rows stay empty. App v1.3.2 or newer fills them in.")
+
     try:
         from .vrchatlog import VRChatLogWatcher
     except Exception as e:
-        api.log(f"vrchatlog.py not importable ({e}) – "
-                f"clock and battery still work.")
+        _log(f"vrchatlog.py not importable ({e}) – "
+             f"clock and battery still work.")
     else:
-        _watcher = VRChatLogWatcher(api.log)
+        _watcher = VRChatLogWatcher(_log)
         _apply_log_dir()
         if _needs_log():
             _watcher.start()
-            api.log("watching the VRChat log for players/world")
+            _log("watching the VRChat log for players/world")
 
     try:
         from .battery import BatteryMonitor
     except Exception as e:
-        api.log(f"battery.py not importable ({e}) – "
-                f"battery placeholders stay empty.")
+        _log(f"battery.py not importable ({e}) – "
+             f"battery placeholders stay empty.")
     else:
-        _battery = BatteryMonitor(api.log)
+        _battery = BatteryMonitor(_log)
         _apply_battery()
 
     try:
         from .battery import openvr_available
         _note("openvr_status", openvr_available()[1], 10 ** 6)
+    except Exception:
+        pass
+    try:
+        from .battery import monado_available
+        _note("monado_status", monado_available()[1], 10 ** 6)
     except Exception:
         pass
     _sync_status()
@@ -121,8 +133,50 @@ def on_settings(settings):
     _sync_status()
 
 
+def _supports(feature):
+    """Does the host offer this optional API feature?
+
+    api.supports() is itself a Plugin API v2 addition, so asking with it
+    directly is exactly the thing that must not be done: on an older app
+    the whole plugin died in setup() with
+
+        AttributeError: 'PluginAPI' object has no attribute 'supports'
+
+    which is a hard load failure for a feature that is optional by
+    definition. So: use supports() when it is there, and otherwise look
+    for the method the feature is named after - "api.set" -> is there a
+    callable api.set? An old host without api.set then simply loses the
+    read-only status rows instead of the entire plugin."""
+    if _api is None:
+        return False
+    probe = getattr(_api, "supports", None)
+    if callable(probe):
+        try:
+            return bool(probe(feature))
+        except Exception:
+            pass
+    return callable(getattr(_api, feature.rsplit(".", 1)[-1], None))
+
+
+def _log(msg):
+    """api.log if the host has one, stdout if it does not."""
+    fn = getattr(_api, "log", None) if _api is not None else None
+    if callable(fn):
+        try:
+            fn(msg)
+            return
+        except Exception:
+            pass
+    print(f"[world_stats] {msg}")
+
+
 def _get(key, default=None):
-    return _api.get(key, default) if _api is not None else default
+    if _api is None:
+        return default
+    try:
+        return _api.get(key, default)
+    except Exception:
+        return default
 
 
 def _set(key, value):
@@ -133,7 +187,7 @@ def _set(key, value):
     if _written.get(key) == value:
         return
     _written[key] = value
-    if _api is not None and _api.supports("api.set"):
+    if _supports("api.set"):
         try:
             _api.set(key, value)
         except Exception:
@@ -151,7 +205,7 @@ def _apply_log_dir():
     try:
         _watcher.set_override(folder)
     except Exception as e:
-        _api.log(f"could not set the log folder: {e}")
+        _log(f"could not set the log folder: {e}")
 
 
 def _needs_log():
@@ -191,7 +245,8 @@ def _apply_battery():
 def _sync_status():
     """Rewrite the read-only rows. GUI thread only – called from
     on_settings(), from setup() and once per chatbox frame."""
-    for key in ("battery_status", "openvr_status"):
+    for key in ("battery_status", "openvr_status",
+                "monado_status"):
         note = _notes.get(key)
         if note and time.time() < note[1]:
             _set(key, note[0])
@@ -262,8 +317,7 @@ def _connect_later(target):
         answer = adb_connect(find_adb(adb_path), target)
     except Exception as e:
         answer = f"failed: {e}"
-    if _api is not None:
-        _api.log(f"adb connect: {answer}")
+    _log(f"adb connect: {answer}")
     _note("battery_status", answer, 20.0)
     if _battery is not None:
         _battery.poll_now()
@@ -272,7 +326,7 @@ def _connect_later(target):
 def _install_later():
     try:
         from .battery import install_openvr
-        answer = install_openvr(_api.log if _api is not None else print)
+        answer = install_openvr(_log)
     except Exception as e:
         answer = f"install failed: {e}"
     _note("openvr_status", answer, 10 ** 6)
@@ -293,9 +347,8 @@ def _now(tz_name):
         except Exception as e:
             if tz_name not in _tz_warned:
                 _tz_warned.add(tz_name)
-                if _api is not None:
-                    _api.log(f"time zone {tz_name!r} unusable ({e}) – "
-                             f"using local time")
+                _log(f"time zone {tz_name!r} unusable ({e}) – "
+                     f"using local time")
     return datetime.datetime.now()
 
 
@@ -393,7 +446,7 @@ def _snapshot():
     except Exception as e:
         if not _warned:          # log once, not every send tick
             _warned = True
-            _api.log(f"log watcher unavailable: {e}")
+            _log(f"log watcher unavailable: {e}")
         return None
 
 

@@ -3,7 +3,16 @@ battery.py – headset / controller / tracker battery for World Stats
 (bundled with the plugin; the app itself carries none of this)
 
 There is no single place a VR headset reports its charge on Linux, so
-this file has two backends and picks whichever answers:
+this file has three backends and picks whichever answers:
+
+  monado  the running OpenXR runtime itself, through libmonado - see
+          monado.py and monado_worker.py next to this file. The library
+          is dlopened in a child process, never in the app, so a crash
+          in it costs a log line instead of the session. This is the one for WiVRn and
+          Monado: the headset battery the WiVRn client streams up from
+          the Android side, plus controllers and trackers, with no adb
+          connection to set up and no SteamVR involved. Costs one
+          library call per poll and never starts a runtime.
 
   adb     the headset itself, over `adb shell dumpsys battery`.
           Works for every Android based standalone – Quest 1/2/3/Pro,
@@ -19,6 +28,10 @@ this file has two backends and picks whichever answers:
           SteamVR to be running – we init as a BACKGROUND app, which
           never starts SteamVR by itself, so polling costs nothing when
           it is not there.
+
+Auto order on Linux is monado, then openvr, then adb: the runtime is
+the cheapest and the most likely to answer, adb the most work for the
+user. On Windows monado is skipped entirely.
 
 Everything happens in a daemon thread. adb is a subprocess and openvr
 is a C library; neither belongs anywhere near the GUI thread. The GUI
@@ -173,6 +186,9 @@ class BatteryMonitor:
         # worker touches these
         self._vr = None
         self._vr_failed_at = 0.0
+        self._mnd = None
+        self._mnd_failed_at = 0.0
+        self._mnd_note = ""
         self._adb_models = {}
         self._said_missing = False
 
@@ -205,6 +221,7 @@ class BatteryMonitor:
         self._stop.set()
         self._wake.set()
         self._shutdown_openvr()
+        self._shutdown_monado()
 
     @property
     def running(self):
@@ -237,8 +254,10 @@ class BatteryMonitor:
     def _poll(self):
         source, _, adb_path, adb_serial, want_ctl = self._cfg()
 
-        order = {"adb": ("adb",), "openvr": ("openvr",)}.get(
-            source, ("openvr", "adb"))
+        default = ("openvr", "adb") if IS_WINDOWS else \
+            ("monado", "openvr", "adb")
+        order = {"adb": ("adb",), "openvr": ("openvr",),
+                 "monado": ("monado",)}.get(source, default)
 
         errors = []
         for backend in order:
@@ -247,6 +266,8 @@ class BatteryMonitor:
             try:
                 if backend == "openvr":
                     got = self._read_openvr(want_ctl)
+                elif backend == "monado":
+                    got = self._read_monado(want_ctl)
                 else:
                     got = self._read_adb(adb_path, adb_serial)
             except Exception as e:
@@ -272,6 +293,66 @@ class BatteryMonitor:
         if not self._said_missing:
             self._said_missing = True
             self.log(f"battery: {msg}")
+
+    # ------------------------------------------------------------ monado
+    def _monado(self):
+        """The live libmonado connection, or None.
+
+        Same shape as _openvr(): a failed connect is throttled for 30s so
+        polling while no runtime is up stays free. A runtime that gets
+        restarted invalidates the root, which shows up as an exception on
+        the next call and drops us back here."""
+        if self._mnd is not None:
+            return self._mnd
+        if time.time() - self._mnd_failed_at < 30.0:
+            return None
+        try:
+            from .monado import Monado
+        except Exception as e:
+            self._mnd_failed_at = time.time()
+            self._mnd_note = f"monado.py not importable: {e}"
+            return None
+        try:
+            self._mnd = Monado(log_fn=self.log)
+        except Exception as e:
+            self._mnd_failed_at = time.time()
+            self._mnd_note = str(e)
+            return None
+        self._mnd_note = f"libmonado {self._mnd.version[0]}." \
+                         f"{self._mnd.version[1]}"
+        return self._mnd
+
+    def _shutdown_monado(self):
+        mnd, self._mnd = self._mnd, None
+        if mnd is None:
+            return
+        try:
+            mnd.close()
+        except Exception:
+            pass
+
+    def _read_monado(self, want_controllers):
+        """None when there is nothing to report *or* when the worker
+        misbehaved - monado.py logs that case itself and holds its own
+        cooldown, so it must not look like a backend failure here.
+        A reported failure (no runtime, libmonado too old) does raise,
+        and that drops the handle for 30s."""
+        if IS_WINDOWS:
+            return None
+        mnd = self._monado()
+        if mnd is None:
+            # surface why rather than a bare "nothing" - "no runtime
+            # running" and "libmonado too old" are different problems
+            # and the Status row is where people read them
+            raise RuntimeError(self._mnd_note or "not available")
+        try:
+            return mnd.read(want_controllers)
+        except Exception as e:
+            # the runtime went away mid-read - drop the handle rather
+            # than keep asking a socket that is not there
+            self._shutdown_monado()
+            self._mnd_failed_at = time.time()
+            raise RuntimeError(str(e))
 
     # --------------------------------------------------------------- adb
     def _read_adb(self, adb_path, wanted_serial):
@@ -424,6 +505,15 @@ def openvr_available():
     except Exception:
         return False, "the openvr package is not installed"
     return True, "installed – needs SteamVR running"
+
+
+def monado_available():
+    """(usable, note) – for the status row in the settings."""
+    try:
+        from .monado import available
+    except Exception as e:
+        return False, f"monado.py not importable: {e}"
+    return available()
 
 
 def install_openvr(log_fn=print):

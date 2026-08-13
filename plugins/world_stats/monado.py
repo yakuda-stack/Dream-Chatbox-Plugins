@@ -182,6 +182,9 @@ class Monado:
         self.log = log_fn if callable(log_fn) else (lambda _m: None)
         self._cooldown_until = 0.0
         self._warned = ""
+        # Why the last read came back empty, for whoever has to put a
+        # sentence in front of the user. Cleared by a good read.
+        self.last_error = ""
 
         payload, err, crashed = _run_worker(["probe"])
         if payload is None:
@@ -206,7 +209,7 @@ class Monado:
         drop this backend for a while."""
         now = time.time()
         if now < self._cooldown_until:
-            return None
+            return None                      # last_error still stands
 
         args = ["read"]
         if not want_controllers:
@@ -216,6 +219,7 @@ class Monado:
 
         if crashed:
             self._cooldown_until = time.time() + COOLDOWN
+            self.last_error = err
             if err != self._warned:      # not once per poll
                 self._warned = err
                 self.log(f"battery: monado worker {err} – skipping the "
@@ -228,6 +232,7 @@ class Monado:
             raise MonadoError(err)
 
         self._warned = ""
+        self.last_error = ""
         return payload.get("data") or None
 
     def close(self):

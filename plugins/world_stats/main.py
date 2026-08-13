@@ -51,6 +51,11 @@ _app_start = 0.0     # only used by the "since the app started" source
 # exception. _written caches what is already there so the same string
 # is not pushed back into the config once a frame.
 _notes = {}          # key -> (text, valid_until)
+
+# How long the Read-now button may hold the GUI thread while it waits
+# for the poll it just asked for. Only ever spent on an explicit click,
+# never on the timed polls.
+ACTION_WAIT = 1.2
 _written = {}
 
 
@@ -242,6 +247,48 @@ def _apply_battery():
     _battery.start()
 
 
+def _battery_summary(snap=None):
+    """What the Read-now button answers with: the charge itself, not a
+    pointer to somewhere else on the page.
+
+    Deliberately not the same string as the Status row - that one names
+    the backend and the headset, this one is the number the button was
+    pressed for."""
+    if _battery is None:
+        return ""
+    if snap is None:
+        snap = _battery.snapshot()
+    if not snap:
+        return "Battery: starting …"
+    if not snap.get("ok"):
+        return _clip(snap.get("error") or "no battery source", 70)
+
+    bits = []
+    hmd = snap.get("hmd")
+    if hmd:
+        icon = str(_get("battery_charge_icon", "⚡") if hmd.get("charging")
+                   else _get("battery_icon", "🔋")).strip()
+        bits.append(f"{icon} {hmd['pct']}%".strip())
+        if hmd.get("charging"):
+            bits[-1] += " charging"
+    ctl = snap.get("controllers") or []
+    if ctl:
+        bits.append(" ".join(f"{c.get('role') or ''}{c['pct']}%"
+                             for c in ctl))
+    trk = snap.get("trackers") or []
+    if trk:
+        low = min(t["pct"] for t in trk)
+        bits.append(f"tracker {low}%")
+    if not bits:
+        return "Battery: nothing reported a charge"
+    return "Battery: " + " · ".join(bits)
+
+
+def _clip(text, limit):
+    text = str(text).replace("\n", " ").strip()
+    return text if len(text) <= limit else text[:limit - 1].rstrip() + "…"
+
+
 def _sync_status():
     """Rewrite the read-only rows. GUI thread only – called from
     on_settings(), from setup() and once per chatbox frame."""
@@ -256,6 +303,16 @@ def _sync_status():
                 _set(key, "off")
             else:
                 _set(key, _status_line())
+
+    # Second half of the Read-now answer. The button returns what it
+    # knows at the moment of the click; an adb read over WiFi can land
+    # after that, and this is what puts the number next to the button
+    # anyway. Harmless where the host does not render text on an action
+    # row - _set() only writes on change, so it is one no-op write.
+    if _battery is not None and _get("battery", False):
+        snap = _battery.snapshot()
+        if snap.get("seq", 0):
+            _set("battery_detect", _battery_summary(snap))
 
 
 def _status_line():
@@ -286,12 +343,30 @@ def on_action(key):
         if not _get("battery", False):
             return "switch the battery block on first"
         _apply_battery()
+
+        # Wait for this particular poll rather than for "a" poll: the
+        # sequence number changes exactly once per completed pass, so a
+        # stale reading from a minute ago cannot be mistaken for the
+        # answer to this click.
+        before = _battery.snapshot().get("seq", 0)
         _battery.poll_now()
-        # the poll itself happens in the worker thread; the Status row
-        # picks the result up on the next frame
-        _note("battery_status", "reading …", 4.0)
+
+        deadline = time.time() + ACTION_WAIT
+        snap = _battery.snapshot()
+        while time.time() < deadline and snap.get("seq", 0) == before:
+            # This is the GUI thread, so the bound matters more than the
+            # resolution. Everything but adb answers in well under a
+            # tenth of a second; adb over WiFi is the one that can run
+            # out the clock, and then the row fills itself in later
+            # through _sync_status().
+            time.sleep(0.03)
+            snap = _battery.snapshot()
+
+        _note("battery_status", _status_line(), 15.0)
         _sync_status()
-        return "reading – watch the Status row"
+        if snap.get("seq", 0) == before:
+            return "reading …"
+        return _battery_summary(snap)
 
     if key == "adb_connect_now":
         target = str(_get("adb_connect", "")).strip()

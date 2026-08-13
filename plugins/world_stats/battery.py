@@ -155,6 +155,11 @@ def adb_connect(adb, target):
     return (out or err or "no answer").strip().splitlines()[-1]
 
 
+def _clip(text, limit):
+    text = str(text).replace("\n", " ").strip()
+    return text if len(text) <= limit else text[:limit - 1].rstrip() + "…"
+
+
 class BatteryMonitor:
     """Polls whichever backend is available, in its own thread.
 
@@ -189,6 +194,7 @@ class BatteryMonitor:
         self._mnd = None
         self._mnd_failed_at = 0.0
         self._mnd_note = ""
+        self._seq = 0
         self._adb_models = {}
         self._said_missing = False
 
@@ -278,18 +284,32 @@ class BatteryMonitor:
                 got["ok"] = True
                 got["error"] = ""
                 with self._lock:
+                    self._seq += 1
+                    got["seq"] = self._seq
                     self._state = got
                 self._said_missing = False
                 return
             errors.append(f"{backend}: nothing")
 
-        self._set_error("; ".join(errors) or "no battery source")
+        # A backend that said "nothing" said nothing useful either.
+        # Drop those as long as anything had a real reason: the Status
+        # row is one line, and "monado: no OpenXR runtime active" is
+        # worth reading where "monado: nothing; openvr: nothing; adb:
+        # nothing" is just noise that overflows the row.
+        real = [e for e in errors if not e.endswith(": nothing")]
+        shown = real or errors
+        if len(shown) > 2:
+            shown = shown[:2] + [f"+{len(shown) - 2} more"]
+        self._set_error("; ".join(_clip(e, 64) for e in shown)
+                        or "no battery source")
 
     def _set_error(self, msg):
         with self._lock:
+            self._seq += 1
             self._state = {"ok": False, "source": "", "device": "",
                            "error": msg, "hmd": None, "controllers": [],
-                           "trackers": [], "at": time.time()}
+                           "trackers": [], "at": time.time(),
+                           "seq": self._seq}
         if not self._said_missing:
             self._said_missing = True
             self.log(f"battery: {msg}")
@@ -346,13 +366,25 @@ class BatteryMonitor:
             # and the Status row is where people read them
             raise RuntimeError(self._mnd_note or "not available")
         try:
-            return mnd.read(want_controllers)
+            got = mnd.read(want_controllers)
         except Exception as e:
             # the runtime went away mid-read - drop the handle rather
             # than keep asking a socket that is not there
-            self._shutdown_monado()
-            self._mnd_failed_at = time.time()
-            raise RuntimeError(str(e))
+            raise RuntimeError(self._drop_monado(str(e)))
+        if got is None and getattr(mnd, "last_error", ""):
+            # the worker crashed or hung. monado.py already logged it and
+            # answered None on purpose; what is left to do here is make
+            # sure the Status row says "crashed with signal 11" instead
+            # of the useless "monado: nothing".
+            raise RuntimeError(self._drop_monado(mnd.last_error))
+        return got
+
+    def _drop_monado(self, why):
+        """Forget the client, remember the reason, start the 30s clock."""
+        self._shutdown_monado()
+        self._mnd_failed_at = time.time()
+        self._mnd_note = why
+        return why
 
     # --------------------------------------------------------------- adb
     def _read_adb(self, adb_path, wanted_serial):

@@ -155,7 +155,7 @@ class Monado:
     def __init__(self, path=""):
         path = path or library_path()
         if not path:
-            raise MonadoError("no active OpenXR runtime with libmonado")
+            raise MonadoError("no OpenXR runtime active")
         try:
             self.lib = ctypes.CDLL(path)
         except OSError as e:
@@ -175,8 +175,7 @@ class Monado:
         rc = self.lib.mnd_root_create(ctypes.byref(self.root))
         if rc != MND_SUCCESS or not self.root:
             self.root = ctypes.c_void_p()
-            raise MonadoError("no runtime running (mnd_root_create "
-                              f"returned {rc})")
+            raise MonadoError(f"no runtime running (rc {rc})")
 
     # ------------------------------------------------------------ setup
     def _bind(self):

@@ -1,7 +1,7 @@
 {
   "name": "World Stats",
   "id": "world_stats",
-  "version": "1.4.1",
+  "version": "1.4.2",
   "author": "yakuda",
   "description": "Three things your chatbox line usually wants and VRChat does not send over OSC. Instance info: how many players are around you, the world name and the access type, read from VRChat's output_log - Steam/Proton prefix on Linux, AppData\\\\LocalLow on Windows - with no extra tools. Two session counters: how long you have been in the current instance and how long you have been in VR this session, both taken from the log's own timestamps so they keep counting when the chatbox is restarted mid-session. A clock that stands on its own: it has no connection to the log watcher and keeps running when VRChat is closed or the whole instance half is switched off, with an optional date, weekday and a second time zone for friends abroad. And your headset battery, read either over adb from the headset itself - Quest, Pico, Vive Focus, no matter whether you stream with WiVRn, ALVR or nothing at all - over the running OpenXR runtime itself (WiVRn/Monado, through libmonado - no adb setup, headset plus controllers plus trackers), or over SteamVR/OpenVR. Every part can be used without the other two.",
   "summary": "Players, world and instance type, a standalone clock, and headset/controller battery.",
@@ -169,7 +169,7 @@
       "key": "clock_group",
       "type": "group",
       "label": "Clock",
-      "expanded": true,
+      "expanded": false,
       "hint": "Completely independent of the two rows above. The clock needs no log file, no VRChat and no headset - switch players and world name off and this keeps running on its own.",
       "items": [
         {
@@ -262,14 +262,14 @@
           "type": "label",
           "label": "Status",
           "default": "off",
-          "hint": "Written by the plugin - which backend answered, which headset, and what it reads."
+          "hint": "Written by the plugin: which backend answered, which headset, and what it reads."
         },
         {
           "key": "battery_detect",
           "type": "action",
-          "label": "Read the battery once, now",
+          "label": "Read the battery now",
           "button": "Read now",
-          "hint": "Skips the wait for the next poll. The answer lands in the Status row above.",
+          "hint": "Skips the wait for the next poll and answers right here.",
           "depends": "battery"
         },
         {
@@ -277,7 +277,7 @@
           "type": "choice",
           "label": "Where to read it from",
           "default": "auto",
-          "hint": "Auto asks the OpenXR runtime first, then SteamVR, then adb. On WiVRn the runtime already knows the headset charge, so pinning it to WiVRn/Monado saves the other two probes; pin it to adb only if you run no Linux runtime at all.",
+          "hint": "Auto asks the OpenXR runtime first, then SteamVR, then adb. Pin it to one to skip the probes for the others.",
           "depends": "battery",
           "choices": [
             {
@@ -321,47 +321,56 @@
           "depends": "battery"
         },
         {
-          "key": "battery_icon",
-          "type": "emoji",
-          "label": "Battery icon",
-          "default": "🔋",
-          "depends": "battery"
-        },
-        {
-          "key": "battery_charge_icon",
-          "type": "emoji",
-          "label": "Charging icon",
-          "default": "⚡",
-          "hint": "Replaces the icon above while the headset is on the cable, empty to keep the same icon either way",
-          "depends": "battery"
-        },
-        {
           "key": "battery_controllers",
           "type": "bool",
           "label": "Controllers and trackers too  –  {controller_battery} {tracker_battery}",
           "default": true,
-          "hint": "WiVRn/Monado and SteamVR only. Android knows nothing about the controllers, so this stays empty on the adb backend.",
+          "hint": "WiVRn/Monado and SteamVR only – Android knows nothing about the controllers, so this stays empty on the adb backend.",
           "depends": "battery"
         },
         {
-          "key": "controller_icon",
-          "type": "emoji",
-          "label": "Controller icon",
-          "default": "🎮",
-          "depends": "battery_controllers"
-        },
-        {
-          "key": "tracker_icon",
-          "type": "emoji",
-          "label": "Tracker icon",
-          "default": "📍",
-          "hint": "The tracker placeholder shows the emptiest tracker, not all of them - that is the one you want to know about.",
-          "depends": "battery_controllers"
+          "key": "battery_icons_group",
+          "type": "group",
+          "label": "Icons",
+          "expanded": false,
+          "hint": "The emoji in front of each number. Leave one empty to drop the prefix for that placeholder.",
+          "items": [
+            {
+              "key": "battery_icon",
+              "type": "emoji",
+              "label": "Battery icon",
+              "default": "🔋",
+              "depends": "battery"
+            },
+            {
+              "key": "battery_charge_icon",
+              "type": "emoji",
+              "label": "Charging icon",
+              "default": "⚡",
+              "hint": "Replaces the icon above while the headset is on the cable, empty to keep the same icon either way",
+              "depends": "battery"
+            },
+            {
+              "key": "controller_icon",
+              "type": "emoji",
+              "label": "Controller icon",
+              "default": "🎮",
+              "depends": "battery_controllers"
+            },
+            {
+              "key": "tracker_icon",
+              "type": "emoji",
+              "label": "Tracker icon",
+              "default": "📍",
+              "hint": "The tracker placeholder shows the emptiest tracker, not all of them - that is the one you want to know about.",
+              "depends": "battery_controllers"
+            }
+          ]
         },
         {
           "key": "monado_group",
           "type": "group",
-          "label": "WiVRn / Monado  –  the OpenXR runtime",
+          "label": "WiVRn / Monado",
           "expanded": false,
           "hint": "Reads libmonado, the same library WayVR and Monado's own tools use. Nothing to install and nothing to configure: the library is found through the active_runtime.json of whichever runtime is currently active. It answers only while a session is running, and it never starts one. The library is loaded in a short-lived helper process, not in the app - if it crashes or hangs, this backend goes quiet for 30 seconds and the chatbox carries on.",
           "items": [
@@ -418,7 +427,7 @@
         {
           "key": "openvr_group",
           "type": "group",
-          "label": "SteamVR  –  controllers, trackers, wired headsets",
+          "label": "SteamVR",
           "expanded": false,
           "hint": "Reads SteamVR's own device list. The plugin attaches as a background application, which never starts SteamVR by itself - while SteamVR is closed this backend simply reports nothing.",
           "items": [

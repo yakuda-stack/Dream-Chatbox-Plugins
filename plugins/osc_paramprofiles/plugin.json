@@ -1,0 +1,200 @@
+{
+  "name": "OSC Parameter Profiles",
+  "id": "osc_paramprofiles",
+  "version": "1.1.3",
+  "author": "yakuda",
+  "description": "Reads the avatar parameters VRChat is reporting, saves them under a name you choose, and sends them back with one click. Profiles live in categories you make up yourself, the search box looks through names, categories and parameter names, and every profile remembers which avatar it was captured on so loading the wrong one warns you first. Everything runs over OSCQuery: the listen port is chosen by the OS and announced over mDNS so it can never collide with the app's own receiver, the send port is read from VRChat instead of assumed, the parameter list is pulled from VRChat's own OSCQuery tree rather than waiting for a change to be pushed, and after sending a profile the values are read back to say which ones actually took.",
+  "short_description": "Save the avatar parameters VRChat reports, load them back with one click.",
+  "Github": "github.com/yakuda-stack",
+  "main": "main.py",
+  "image": "logo.png",
+  "enabled": false,
+  "api": 2,
+  "min_app": "v1.3.2",
+  "is_linux": true,
+  "is_windows": true,
+  "requires": [
+    "zeroconf"
+  ],
+  "template": "{osc_paramprofiles}",
+  "placeholders": {
+    "profile": "name of the profile that was loaded last",
+    "category": "its category, if it has one",
+    "count": "how many avatar parameters are currently known",
+    "avatar": "the current avatar id as VRChat reports it"
+  },
+  "settings": [
+    {
+      "key": "conn",
+      "type": "group",
+      "label": "Connection",
+      "expanded": false,
+      "items": [
+        {
+          "key": "status",
+          "type": "label",
+          "label": "Connection status",
+          "default": "not running",
+          "hint": "Written by the plugin. The same information sits in the status line at the bottom of the panel, and anything actually broken gets a banner at the top."
+        },
+        {
+          "key": "conn_note",
+          "type": "label",
+          "label": "",
+          "default": "OSCQuery needs avahi-daemon running and OSC enabled in VRChat (radial menu → Options → OSC → Enabled).",
+          "hint": "Under Proton VRChat's mDNS is occasionally slow to notice a new service. The plugin re-announces itself up to three times on its own before giving up and saying so in the banner. It also re-announces once after the first successful pull, so VRChat can see the parameter paths and push updates to them."
+        },
+        {
+          "key": "poll_seconds",
+          "type": "slider",
+          "label": "Ask VRChat for the full list every",
+          "default": 5,
+          "min": 0,
+          "max": 60,
+          "suffix": " s",
+          "hint": "A pull, not a push. VRChat only pushes a parameter when it changes, which is why a listener that starts mid-session used to see nothing; polling its OSCQuery tree fixes that permanently. One local HTTP request, cheap enough to leave on. 0 turns it off and falls back to push-only."
+        },
+        {
+          "key": "service_name",
+          "type": "text",
+          "label": "Announce as",
+          "default": "OSC-DreamChatbox ParamProfiles",
+          "hint": "What this shows up as on the network. Change it if two copies run on the same machine."
+        },
+        {
+          "key": "refresh_now",
+          "type": "action",
+          "label": "Nothing in the list?",
+          "button": "Refresh from VRChat now",
+          "hint": "Asks VRChat's OSCQuery server for the complete parameter tree immediately. The ⟳ button in the panel does the same thing."
+        },
+        {
+          "key": "restart",
+          "type": "action",
+          "label": "Reconnect",
+          "button": "Re-announce and reconnect",
+          "hint": "Rebuilds the socket, re-registers over mDNS and starts discovery again. Runs on a background thread, so the app stays responsive while it happens - it takes about a second."
+        }
+      ]
+    },
+    {
+      "key": "capture",
+      "type": "group",
+      "label": "What gets captured",
+      "expanded": false,
+      "items": [
+        {
+          "key": "capture_note",
+          "type": "label",
+          "label": "",
+          "default": "VRChat's OSCQuery tree says which parameters accept a write. The two switches below are only the fallback for parameters seen before the tree was fetched.",
+          "hint": "In the Live parameters table, 'game' means VRChat itself declared the parameter read-only, while 'guess' means the answer still comes from the name list."
+        },
+        {
+          "key": "skip_builtin",
+          "type": "bool",
+          "label": "Skip VRChat's own parameters",
+          "default": true,
+          "hint": "Viseme, GestureLeft, Velocity, Grounded, MuteSelf and the rest of the built-ins are written by the game every frame. A saved value for them is meaningless and sending one back does nothing."
+        },
+        {
+          "key": "skip_driven",
+          "type": "bool",
+          "label": "Skip PhysBone and Contact parameters",
+          "default": true,
+          "hint": "Anything ending in _IsGrabbed, _Angle, _Stretch, _Squish, _Proximity comes from the physics solver, not from a menu."
+        },
+        {
+          "key": "warn_avatar",
+          "type": "bool",
+          "label": "Warn before loading onto another avatar",
+          "default": true,
+          "hint": "A profile remembers the avatar it was captured on. Loading it elsewhere is harmless - VRChat drops parameters the avatar does not have - but rarely what you meant."
+        }
+      ]
+    },
+    {
+      "key": "apply",
+      "type": "group",
+      "label": "Sending",
+      "expanded": false,
+      "items": [
+        {
+          "key": "send_delay_ms",
+          "type": "slider",
+          "label": "Pause between parameters",
+          "default": 8,
+          "min": 0,
+          "max": 50,
+          "suffix": " ms",
+          "hint": "VRChat drops OSC packets when they arrive faster than it reads them, and a dropped toggle is a wrong outfit. 8 ms is safe for most profiles; raise it if the check below keeps reporting values that did not take."
+        },
+        {
+          "key": "send_repeat",
+          "type": "int",
+          "label": "Send everything this often",
+          "default": 1,
+          "min": 1,
+          "max": 3,
+          "suffix": "×",
+          "hint": "A second pass catches the odd lost packet at the cost of doubling the time. Try this before raising the pause."
+        },
+        {
+          "key": "verify_after_send",
+          "type": "bool",
+          "label": "Check afterwards that it took",
+          "default": true,
+          "hint": "Reads the values back out of VRChat's OSCQuery tree and names the ones that still differ. Only possible because of OSCQuery - a plain OSC send gives no feedback at all, which is why a half-applied profile used to look like a working one."
+        }
+      ]
+    },
+    {
+      "key": "chatbox",
+      "type": "group",
+      "label": "Chatbox",
+      "expanded": false,
+      "items": [
+        {
+          "key": "show_in_chatbox",
+          "type": "bool",
+          "label": "Show the loaded profile in the chatbox",
+          "default": false,
+          "hint": "Puts the last loaded profile behind {osc_paramprofiles}. Off by default - most people want the profiles, not a line about them."
+        },
+        {
+          "key": "icon",
+          "type": "emoji",
+          "label": "Icon in front of it",
+          "default": "🎭",
+          "depends": "show_in_chatbox"
+        },
+        {
+          "key": "show_seconds",
+          "type": "int",
+          "label": "Keep it visible for",
+          "default": 30,
+          "min": 0,
+          "max": 600,
+          "suffix": " s",
+          "hint": "0 keeps it there until the next profile is loaded.",
+          "depends": "show_in_chatbox"
+        }
+      ]
+    },
+    {
+      "key": "advanced",
+      "type": "group",
+      "label": "Advanced",
+      "expanded": false,
+      "items": [
+        {
+          "key": "open_folder",
+          "type": "action",
+          "label": "profiles.json",
+          "button": "Open the folder",
+          "hint": "Profiles are one readable json file. It survives a plugin update - the plugin ships no configs/ folder, on purpose."
+        }
+      ]
+    }
+  ]
+}

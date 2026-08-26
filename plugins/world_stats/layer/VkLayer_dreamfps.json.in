@@ -1,0 +1,14 @@
+{
+    "file_format_version": "1.2.0",
+    "layer": {
+        "name": "VK_LAYER_YAKUDA_dreamfps",
+        "type": "GLOBAL",
+        "library_path": "@LIBRARY_PATH@",
+        "api_version": "1.3.0",
+        "implementation_version": "1",
+        "description": "OSC-DreamChatbox frame counter",
+        "disable_environment": {
+            "DREAMFPS_DISABLE": "1"
+        }
+    }
+}

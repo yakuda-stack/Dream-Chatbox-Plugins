@@ -40,6 +40,7 @@ import time
 _api = None
 _watcher = None
 _battery = None
+_fps = None
 _warned = False
 _tz_warned = set()
 _app_start = 0.0     # only used by the "since the app started" source
@@ -61,7 +62,7 @@ _written = {}
 
 # ---------------------------------------------------------------- setup
 def setup(api):
-    global _api, _watcher, _battery, _app_start
+    global _api, _watcher, _battery, _fps, _app_start
     _api = api
     _app_start = time.time()
 
@@ -94,6 +95,14 @@ def setup(api):
         _apply_battery()
 
     try:
+        from .fps import FpsMonitor
+    except Exception as e:
+        _log(f"fps.py not importable ({e}) - the FPS placeholders stay empty.")
+    else:
+        _fps = FpsMonitor(_log)
+        _apply_fps()
+
+    try:
         from .battery import openvr_available
         _note("openvr_status", openvr_available()[1], 10 ** 6)
     except Exception:
@@ -107,7 +116,7 @@ def setup(api):
 
 
 def teardown():
-    global _watcher, _battery
+    global _watcher, _battery, _fps
     for obj in (_watcher, _battery):
         try:
             if obj is not None:
@@ -116,6 +125,12 @@ def teardown():
             pass
     _watcher = None
     _battery = None
+    # nothing to stop: the FPS monitor holds no thread and no process,
+    # only a cached number. The Vulkan layer manifest is deliberately
+    # NOT removed here - teardown() also runs on app shutdown, and
+    # deleting it every time the app closes would mean the next game
+    # launched before the chatbox is not measured.
+    _fps = None
     _notes.clear()
     _written.clear()
 
@@ -135,6 +150,7 @@ def on_settings(settings):
         else:
             _watcher.stop()
     _apply_battery()
+    _apply_fps()
     _sync_status()
 
 
@@ -247,6 +263,77 @@ def _apply_battery():
     _battery.start()
 
 
+def _apply_fps():
+    """Push the settings into the monitor and arm or disarm the layer.
+
+    The checkbox is the switch, exactly as it reads: ticking FPS writes
+    the Vulkan layer manifest, unticking it deletes the file again. One
+    place does it, so what is on disk cannot disagree with what the UI
+    says.
+    """
+    if _fps is None:
+        return
+    _fps.set_config(
+        source=str(_get("fps_source", "auto")),
+        process=str(_get("fps_process", "vrchat")),
+        mangohud_dir=str(_get("fps_mangohud_dir", "")),
+    )
+    _sync_fps_layer()
+
+
+def _sync_fps_layer():
+    """Install or remove the layer manifest to match the settings.
+
+    Idempotent: installing over an existing manifest rewrites it, which
+    is also how a library path that moved - a plugin update, an AppImage
+    upgrade - gets repaired.
+    """
+    try:
+        from . import fpslayer
+    except Exception:
+        return
+    if fpslayer.IS_WINDOWS:
+        return
+    wanted = (bool(_get("fps", False))
+              and str(_get("fps_source", "auto")) in ("auto", "layer")
+              and fpslayer.find_library() is not None)
+    try:
+        if wanted and not fpslayer.installed():
+            ok, msg = fpslayer.install()
+            _log(("FPS: " if ok else "FPS: ") + msg)
+        elif not wanted and fpslayer.installed():
+            ok, msg = fpslayer.uninstall()
+            _log("FPS: " + msg)
+    except Exception as e:
+        _log(f"FPS: layer setup failed ({type(e).__name__}: {e})")
+
+
+def _fps_status():
+    """The read-only Status row under the FPS checkbox."""
+    if _fps is None:
+        return "fps.py is not loaded"
+    if not _get("fps", False):
+        return "off"
+    try:
+        return _clip(_fps.status_line(), 110)
+    except Exception as e:
+        return f"unavailable ({type(e).__name__})"
+
+
+def _build_layer_later():
+    """gcc takes about a second - too long for the GUI thread."""
+    try:
+        from . import fpslayer
+        ok, msg = fpslayer.build()
+    except Exception as e:
+        ok, msg = False, f"build failed: {e}"
+    _log(f"FPS: {msg}")
+    _note("fps_status", _clip(msg, 110), 30.0)
+    if ok:
+        # a freshly built library still has to be pointed at
+        _sync_fps_layer()
+
+
 def _battery_summary(snap=None):
     """What the Read-now button answers with: the charge itself, not a
     pointer to somewhere else on the page.
@@ -293,10 +380,13 @@ def _sync_status():
     """Rewrite the read-only rows. GUI thread only – called from
     on_settings(), from setup() and once per chatbox frame."""
     for key in ("battery_status", "openvr_status",
-                "monado_status"):
+                "monado_status", "fps_status"):
         note = _notes.get(key)
         if note and time.time() < note[1]:
             _set(key, note[0])
+        elif key == "fps_status":
+            _notes.pop(key, None)
+            _set(key, _fps_status())
         elif key == "battery_status":
             _notes.pop(key, None)
             if _battery is None or not _get("battery", False):
@@ -367,6 +457,42 @@ def on_action(key):
         if snap.get("seq", 0) == before:
             return "reading …"
         return _battery_summary(snap)
+
+    if key == "fps_build":
+        try:
+            from . import fpslayer
+        except Exception as e:
+            return f"fpslayer.py is not loaded ({e})"
+        if fpslayer.IS_WINDOWS:
+            return "Windows reads RTSS - there is nothing to build."
+        ok, why = fpslayer.build_tools()
+        if not ok:
+            return _clip(f"Cannot build: {why}", 110)
+        threading.Thread(target=_build_layer_later, daemon=True).start()
+        return "building - this takes a moment"
+
+    if key == "fps_check":
+        if _fps is None:
+            return "fps.py is not loaded"
+        if not _get("fps", False):
+            return "switch FPS on first"
+        _apply_fps()
+        line = _fps.status_line()
+        _note("fps_status", _clip(line, 110), 20.0)
+        _sync_status()
+        return _clip(line, 110)
+
+    if key == "fps_detect_mangohud":
+        try:
+            from . import fpsmangohud
+        except Exception as e:
+            return f"fpsmangohud.py is not loaded ({e})"
+        folder = fpsmangohud.detect()
+        if folder is None:
+            return _clip(fpsmangohud.status_line(""), 110)
+        _set("fps_mangohud_dir", str(folder))
+        _apply_fps()
+        return f"found {folder}"
 
     if key == "adb_connect_now":
         target = str(_get("adb_connect", "")).strip()
@@ -509,6 +635,42 @@ def _battery_values(vals):
             vals["tracker_battery"] = f"{ticon} {lowest}%{suffix}".strip()
 
 
+# ------------------------------------------------------------------ fps
+def _fps_values(vals):
+    """{fps} {fps_raw} {frametime} {fps_source}.
+
+    Everything stays None when FPS is off or nothing is rendering, and
+    apply_template drops a None together with its separators - so a line
+    like "{group_world} | {fps}" never leaves a stray pipe behind when
+    you are not in a game.
+    """
+    if _fps is None or not _get("fps", False):
+        return
+    value = _fps.value()
+    if value is None:
+        return
+    ceiling = int(_get("fps_min", 0) or 0)
+    if ceiling and value >= ceiling:
+        # "Only show below": above the ceiling the placeholder stays
+        # empty, so the line appears exactly when the frame rate is
+        # worth mentioning and gives its characters back when it is not.
+        return
+    icon = str(_get("fps_icon", "") or "").strip()
+    suffix = " FPS" if _get("fps_unit", True) else ""
+    vals["fps"] = f"{icon} {value}{suffix}".strip()
+    vals["fps_raw"] = str(value)
+
+    if _get("fps_frametime", False):
+        ms = _fps.frametime()
+        if ms:
+            vals["frametime"] = f"{ms:.1f} ms"
+
+    backend = _fps.backend()
+    if backend:
+        vals["fps_source"] = {"layer": "layer", "mangohud": "MangoHud",
+                              "rtss": "RTSS"}.get(backend, backend)
+
+
 # ----------------------------------------------------------------- world
 def _snapshot():
     """Reads the watcher, never raising – if the log isn't there yet we
@@ -596,7 +758,8 @@ def _world_values(vals):
 
 
 # --------------------------------------------------------------- values
-KEYS = ("player_in_world", "group_world", "instance_type",
+KEYS = ("fps", "fps_raw", "frametime", "fps_source",
+        "player_in_world", "group_world", "instance_type",
         "world_time", "vr_time",
         "realtime", "realdate", "realday", "realtime_alt",
         "hmd_battery", "hmd_battery_raw", "hmd_battery_icon",
@@ -614,6 +777,7 @@ def get_values():
     _world_values(vals)
     _clock_values(vals)
     _battery_values(vals)
+    _fps_values(vals)
     _sync_status()      # same thread as on_tick(), so this is safe here
     return vals
 
@@ -624,7 +788,7 @@ def get_text():
     parts = [vals["player_in_world"], vals["group_world"],
              vals["world_time"], vals["vr_time"],
              vals["realtime"], vals["realtime_alt"], vals["hmd_battery"],
-             vals["controller_battery"]]
+             vals["controller_battery"], vals["fps"]]
     return " | ".join(p for p in parts if p)
 
 

@@ -1,20 +1,24 @@
 {
   "name": "World Stats",
   "id": "world_stats",
-  "version": "1.4.2",
+  "version": "1.5.0",
   "author": "yakuda",
-  "description": "Three things your chatbox line usually wants and VRChat does not send over OSC. Instance info: how many players are around you, the world name and the access type, read from VRChat's output_log - Steam/Proton prefix on Linux, AppData\\\\LocalLow on Windows - with no extra tools. Two session counters: how long you have been in the current instance and how long you have been in VR this session, both taken from the log's own timestamps so they keep counting when the chatbox is restarted mid-session. A clock that stands on its own: it has no connection to the log watcher and keeps running when VRChat is closed or the whole instance half is switched off, with an optional date, weekday and a second time zone for friends abroad. And your headset battery, read either over adb from the headset itself - Quest, Pico, Vive Focus, no matter whether you stream with WiVRn, ALVR or nothing at all - over the running OpenXR runtime itself (WiVRn/Monado, through libmonado - no adb setup, headset plus controllers plus trackers), or over SteamVR/OpenVR. Every part can be used without the other two.",
-  "summary": "Players, world and instance type, a standalone clock, and headset/controller battery.",
+  "description": "Four things your chatbox line usually wants and VRChat does not send over OSC. Instance info: how many players are around you, the world name and the access type, read from VRChat's output_log - Steam/Proton prefix on Linux, AppData\\\\LocalLow on Windows - with no extra tools. Two session counters: how long you have been in the current instance and how long you have been in VR this session, both taken from the log's own timestamps so they keep counting when the chatbox is restarted mid-session. A clock that stands on its own: it has no connection to the log watcher and keeps running when VRChat is closed, with an optional date, weekday and a second time zone for friends abroad. Your headset battery, read either over adb from the headset itself - Quest, Pico, Vive Focus, no matter whether you stream with WiVRn, ALVR or nothing at all - over the running OpenXR runtime through libmonado, or over SteamVR/OpenVR. And your frame rate: on Linux from a small Vulkan layer the plugin builds and loads into the game itself, so nothing else has to be installed - MangoHud's log still works as an alternative. On Windows from RTSS, because VRChat renders D3D11 there and a Vulkan layer would never see it. Every part can be used without the others.",
+  "summary": "Players, world and instance type, a standalone clock, headset/controller battery, and your frame rate.",
   "Github": "github.com/yakuda-stack",
   "main": "main.py",
   "enabled": true,
   "api": 2,
-  "min_app": "v1.3.2",
+  "min_app": "v1.4.4",
   "is_linux": true,
   "is_windows": true,
   "image": "logo.png",
-  "template": "{player_in_world} {group_world} \\n {realtime} {hmd_battery}",
+  "template": "{player_in_world} {group_world} \\n {realtime} {fps} {hmd_battery}",
   "placeholders": {
+    "fps": "frames per second, icon + number",
+    "fps_raw": "frames per second, the bare number",
+    "frametime": "milliseconds per frame",
+    "fps_source": "which backend answered - layer / MangoHud / RTSS",
     "player_in_world": "number of players in the instance",
     "group_world": "world name",
     "instance_type": "Public / Friends+ / Invite …",
@@ -32,6 +36,10 @@
     "tracker_battery": "the emptiest tracker"
   },
   "global_placeholders": [
+    "fps",
+    "fps_raw",
+    "frametime",
+    "fps_source",
     "player_in_world",
     "group_world",
     "instance_type",
@@ -79,6 +87,156 @@
       "suffix": " chars",
       "hint": "Longer names are cut off - the chatbox has limited space",
       "depends": "world"
+    },
+    {
+      "key": "fps_group",
+      "type": "group",
+      "label": "Frame rate",
+      "expanded": false,
+      "hint": "Frames per second only exist inside the process drawing them - nothing in the operating system knows how fast a game is rendering, so something has to be loaded into the game. On Linux this plugin ships a small Vulkan layer that does exactly that. On Windows it reads RTSS, because VRChat renders D3D11 there and a Vulkan layer would never see it.",
+      "items": [
+        {
+          "key": "fps",
+          "type": "bool",
+          "label": "Frame rate  –  {fps}",
+          "default": false,
+          "hint": "On Linux this also arms the Vulkan layer: switching it on writes a file into ~/.local/share/vulkan/implicit_layer.d, switching it off deletes it again. Nothing keeps running while this is off. A game that was already open when you tick this has to be restarted - the loader reads that folder once, when the game starts."
+        },
+        {
+          "key": "fps_status",
+          "type": "label",
+          "label": "Status",
+          "default": "off",
+          "hint": "Written by the plugin: which backend answered, which process it is reading, and what it reads."
+        },
+        {
+          "key": "fps_check",
+          "type": "action",
+          "label": "Check it now",
+          "button": "Check",
+          "hint": "Re-reads everything and says which game, if any, is currently reporting a frame rate.",
+          "depends": "fps"
+        },
+        {
+          "key": "fps_source",
+          "type": "choice",
+          "label": "Where to read it from",
+          "default": "auto",
+          "hint": "Auto tries the built-in layer first and falls back to a MangoHud log, so anyone who already has MangoHud working keeps working. Windows ignores this - RTSS is the only source there.",
+          "depends": "fps",
+          "choices": [
+            {
+              "value": "auto",
+              "label": "Auto  –  layer, then MangoHud"
+            },
+            {
+              "value": "layer",
+              "label": "Built-in Vulkan layer"
+            },
+            {
+              "value": "mangohud",
+              "label": "MangoHud log only"
+            },
+            {
+              "value": "rtss",
+              "label": "RTSS  –  Windows"
+            }
+          ]
+        },
+        {
+          "key": "fps_process",
+          "type": "text",
+          "label": "Prefer this process",
+          "default": "vrchat",
+          "placeholder": "vrchat",
+          "hint": "Part of the executable name. Without it a browser playing a video, or the desktop compositor, can outrank the game on an idle machine. Leave it empty to always take whatever is drawing the most.",
+          "depends": "fps"
+        },
+        {
+          "key": "fps_icon",
+          "type": "emoji",
+          "label": "FPS icon",
+          "default": "🎮",
+          "hint": "In front of the number, empty for none",
+          "depends": "fps"
+        },
+        {
+          "key": "fps_unit",
+          "type": "bool",
+          "label": "Write \"FPS\" after the number",
+          "default": true,
+          "hint": "Off saves four characters, which the chatbox can use for something else.",
+          "depends": "fps"
+        },
+        {
+          "key": "fps_frametime",
+          "type": "bool",
+          "label": "Frame time too  –  {frametime}",
+          "default": false,
+          "hint": "Milliseconds per frame. The number that actually tells you whether a session is smooth - 11.1 ms is 90 fps, and a jump to 22 ms is a dropped frame you can feel.",
+          "depends": "fps"
+        },
+        {
+          "key": "fps_min",
+          "type": "slider",
+          "label": "Only show below",
+          "default": 0,
+          "min": 0,
+          "max": 240,
+          "suffix": " fps",
+          "hint": "Leave at 0 to always show it. Set it and the placeholder stays empty while the frame rate is fine - for people who only want the line to appear when something is wrong.",
+          "depends": "fps"
+        },
+        {
+          "key": "fps_layer_group",
+          "type": "group",
+          "label": "Vulkan layer  –  Linux",
+          "expanded": false,
+          "hint": "About 500 lines of C in the plugin's layer/ folder whose entire job is to count calls to vkQueuePresentKHR and publish the rate in shared memory. It draws nothing, adds no overlay, enables no extension and allocates nothing per frame - a frame counter that hitches the frame rate it is measuring would be worse than useless. VRChat under Proton renders through DXVK, which is Vulkan, so it is covered like a native Vulkan title. OpenGL-only games are not; MangoHud has the same blind spot for the same reason. DREAMFPS_DISABLE=1 switches it off for a single process without touching the settings.",
+          "items": [
+            {
+              "key": "fps_build",
+              "type": "action",
+              "label": "Build the layer",
+              "button": "Build",
+              "hint": "Compiles layer/dreamfps_layer.c with the compiler already on your system. Needs gcc, make and the Vulkan headers - Arch: base-devel vulkan-headers, Fedora: gcc make vulkan-headers, Debian: build-essential libvulkan-dev. The plugin ships the source rather than a prebuilt binary on purpose: this thing loads into every Vulkan application you run, and that should be something you could have read first."
+            }
+          ]
+        },
+        {
+          "key": "fps_mangohud_group",
+          "type": "group",
+          "label": "MangoHud log  –  Linux",
+          "expanded": false,
+          "hint": "The older route, kept because plenty of people already have it set up. Switch CSV logging on in MangoHud or GOverlay, then point this at the folder it writes to.",
+          "items": [
+            {
+              "key": "fps_mangohud_dir",
+              "type": "path",
+              "label": "Log folder",
+              "default": "",
+              "mode": "dir",
+              "placeholder": "empty = not used",
+              "hint": "Where MangoHud writes its .csv logs. Only the newest one is read, and only its last few lines."
+            },
+            {
+              "key": "fps_detect_mangohud",
+              "type": "action",
+              "label": "Find it for me",
+              "button": "Detect",
+              "hint": "Reads output_folder out of your MangoHud configs - including the per-game ones and the ones GOverlay writes, which is how most people set logging up without ever seeing the path - and falls back to the usual folders. A folder holding VRChat logs wins over one holding somebody else's benchmark."
+            }
+          ]
+        },
+        {
+          "key": "fps_rtss_group",
+          "type": "group",
+          "label": "RTSS  –  Windows",
+          "expanded": false,
+          "hint": "RivaTuner Statistics Server ships with MSI Afterburner and is what nearly every Windows overlay already uses. The plugin only reads the shared memory block RTSS publishes - no injection of its own, no admin rights, nothing that anti-cheat has to have an opinion about. Install it, leave it running, and the frame rate appears.",
+          "items": []
+        }
+      ]
     },
     {
       "key": "timer_group",

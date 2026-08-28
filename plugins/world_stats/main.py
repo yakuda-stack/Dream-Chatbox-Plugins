@@ -58,6 +58,26 @@ _notes = {}          # key -> (text, valid_until)
 # never on the timed polls.
 ACTION_WAIT = 1.2
 _written = {}
+_last_write = {}     # key -> monotonic time of the last api.set()
+
+#: Floor between two writes of the same settings key. api.set() persists
+#: to config.json, so a row whose text moves on its own is a disk write
+#: every time it moves. v1.5.0 had exactly that: the FPS status row
+#: carried the live frame rate, which changes on nearly every read, and
+#: _sync_status() runs once a chatbox frame - about six config writes a
+#: second for as long as FPS was switched on. Unnoticeable on an SSD;
+#: enough to make the whole app look frozen on a failing drive, because
+#: every one of those writes waits on the disk.
+#:
+#: The volatile number is gone (see fps.status_line), and this is the
+#: belt to that pair of braces: no status row this plugin ever grows can
+#: bring the behaviour back.
+#:
+#: Deferred, not dropped. _sync_status() recomputes and re-offers every
+#: row on every frame, so a value held back here is written by the first
+#: call after the floor passes. Notes bypass it entirely - a message
+#: that expires before it is shown was pointless to write.
+MIN_WRITE_SEC = 2.0
 
 
 # ---------------------------------------------------------------- setup
@@ -133,6 +153,8 @@ def teardown():
     _fps = None
     _notes.clear()
     _written.clear()
+    _last_write.clear()
+    _invalidate_values()
 
 
 def on_event(name, data=None):
@@ -143,6 +165,9 @@ def on_event(name, data=None):
 # ------------------------------------------------------------- settings
 def on_settings(settings):
     """The user changed something in the Settings block."""
+    # a toggle has to show up on the very next frame, not once the
+    # memoised pass has aged out
+    _invalidate_values()
     if _watcher is not None:
         _apply_log_dir()
         if _needs_log():
@@ -200,14 +225,25 @@ def _get(key, default=None):
         return default
 
 
-def _set(key, value):
-    """Write a settings row, but only when it really changed.
+def _set(key, value, urgent=False):
+    """Write a settings row, but only when it really changed - and not
+    more often than MIN_WRITE_SEC, because api.set() goes to disk.
 
     on_settings() fires on every write, and on_settings() calls back
-    into here - without this guard that is a loop."""
+    into here - without the change guard that is a loop.
+
+    ``urgent`` skips the rate limit. Used for the _note() messages,
+    which carry their own expiry and would be worthless if they landed
+    after it.
+    """
     if _written.get(key) == value:
         return
+    if not urgent:
+        now = time.monotonic()
+        if now - _last_write.get(key, -1e9) < MIN_WRITE_SEC:
+            return          # the next frame offers this row again
     _written[key] = value
+    _last_write[key] = time.monotonic()
     if _supports("api.set"):
         try:
             _api.set(key, value)
@@ -383,7 +419,7 @@ def _sync_status():
                 "monado_status", "fps_status"):
         note = _notes.get(key)
         if note and time.time() < note[1]:
-            _set(key, note[0])
+            _set(key, note[0], urgent=True)
         elif key == "fps_status":
             _notes.pop(key, None)
             _set(key, _fps_status())
@@ -766,13 +802,28 @@ KEYS = ("fps", "fps_raw", "frametime", "fps_source",
         "hmd_battery_bar", "controller_battery", "tracker_battery")
 
 
-def get_values():
-    """Fills every placeholder this plugin owns.
+#: How long one get_values() pass is reused. The host calls get_lines(),
+#: get_text() AND get_values() once per chatbox frame, and the first two
+#: are written in terms of the third - so a naive implementation does the
+#: whole job three times for one frame: three log snapshots, three
+#: battery snapshots, three FPS reads, three _sync_status() passes.
+#:
+#: Frames are hundreds of milliseconds apart, so a window this short only
+#: ever collapses the calls that belong to the SAME frame. Nothing on
+#: screen updates any later than it did before - including {realtime}
+#: with seconds, which changes far slower than this.
+_VALUES_TTL = 0.1
+_values_cache = (0.0, None)
 
-    Anything switched off or unknown stays None, which apply_template
-    drops together with its surrounding separators – so a template like
-    "{player_in_world} | {group_world}" never leaves a stray '|' behind.
-    """
+
+def _invalidate_values():
+    """Drop the memoised pass, so the next frame recomputes from scratch."""
+    global _values_cache
+    _values_cache = (0.0, None)
+
+
+def _compute_values():
+    """One full pass. Everything expensive in this plugin happens here."""
     vals = {k: None for k in KEYS}
     _world_values(vals)
     _clock_values(vals)
@@ -780,6 +831,25 @@ def get_values():
     _fps_values(vals)
     _sync_status()      # same thread as on_tick(), so this is safe here
     return vals
+
+
+def get_values():
+    """Fills every placeholder this plugin owns.
+
+    Anything switched off or unknown stays None, which apply_template
+    drops together with its surrounding separators – so a template like
+    "{player_in_world} | {group_world}" never leaves a stray '|' behind.
+
+    Memoised for _VALUES_TTL – see there for why that is not a shortcut.
+    """
+    global _values_cache
+    now = time.monotonic()
+    when, cached = _values_cache
+    if cached is not None and now - when < _VALUES_TTL:
+        return dict(cached)     # a copy: callers may edit what they get
+    vals = _compute_values()
+    _values_cache = (now, vals)
+    return dict(vals)
 
 
 def get_text():

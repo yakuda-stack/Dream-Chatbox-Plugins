@@ -178,12 +178,26 @@ class FpsMonitor:
     # --------------------------------------------------------- status
     def status_line(self):
         """What the Status row shows: which backend answered and what it
-        reads, or - when none did - which step is missing."""
+        reads, or - when none did - which step is missing.
+
+        Deliberately WITHOUT the frame rate. This string is written into
+        the plugin's settings by _sync_status(), and api.set() persists,
+        so every value it takes costs a config.json write. A live frame
+        rate changes on almost every read, which turned a read-only
+        status row into roughly six disk writes a second for as long as
+        FPS was switched on - unnoticeable on an SSD, and enough to make
+        the whole app look frozen on a failing drive.
+
+        Nothing is lost by leaving it out: the number's home is the
+        chatbox line the user asked for it in, and naming the backend and
+        the process it found already answers the only question this row
+        exists for - is it working.
+        """
         hit = self.read()
         if hit:
             label = {"layer": "built-in layer", "mangohud": "MangoHud",
                      "rtss": "RTSS"}.get(hit[3], hit[3])
-            return f"{label} · {hit[2] or 'a game'} · {hit[0]:.0f} fps"
+            return f"{label} · {hit[2] or 'a game'} · reading"
 
         if IS_WINDOWS:
             return self.rtss.status_line()

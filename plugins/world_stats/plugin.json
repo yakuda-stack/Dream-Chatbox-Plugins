@@ -1,7 +1,7 @@
 {
   "name": "World Stats",
   "id": "world_stats",
-  "version": "1.5.0",
+  "version": "1.5.1",
   "author": "yakuda",
   "description": "Four things your chatbox line usually wants and VRChat does not send over OSC. Instance info: how many players are around you, the world name and the access type, read from VRChat's output_log - Steam/Proton prefix on Linux, AppData\\\\LocalLow on Windows - with no extra tools. Two session counters: how long you have been in the current instance and how long you have been in VR this session, both taken from the log's own timestamps so they keep counting when the chatbox is restarted mid-session. A clock that stands on its own: it has no connection to the log watcher and keeps running when VRChat is closed, with an optional date, weekday and a second time zone for friends abroad. Your headset battery, read either over adb from the headset itself - Quest, Pico, Vive Focus, no matter whether you stream with WiVRn, ALVR or nothing at all - over the running OpenXR runtime through libmonado, or over SteamVR/OpenVR. And your frame rate: on Linux from a small Vulkan layer the plugin builds and loads into the game itself, so nothing else has to be installed - MangoHud's log still works as an alternative. On Windows from RTSS, because VRChat renders D3D11 there and a Vulkan layer would never see it. Every part can be used without the others.",
   "summary": "Players, world and instance type, a standalone clock, headset/controller battery, and your frame rate.",

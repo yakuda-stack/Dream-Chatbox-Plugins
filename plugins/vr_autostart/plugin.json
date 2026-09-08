@@ -1,7 +1,7 @@
 {
   "name": "VR Autostart",
   "id": "vr_autostart",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "author": "yakuda",
   "description": "Start a whole VR set from one program. The trigger is a dropdown of programs, not a process name to guess: VRChat, SteamVR, WiVRn, Monado, ALVR, SlimeVR, WlxOverlay-S, WayVR, VRCX, Steam, Resonite, ChilloutVR - each one asked the way it can actually be answered, which for WiVRn means process, IPC socket and systemd user unit, in that order. Next to the dropdown a folder button for anything not in the list: an AppImage, a .sh, a binary, an .exe - or a terminal command whose exit code answers the question. Every trigger row says for itself whether it must be running or whether it is one of several alternatives, so \"VRChat and WiVRn\" and \"VRChat and either WiVRn or SteamVR\" are both a single rule - and a line under the triggers spells the whole condition out and names which half is still missing. Then any number of programs per rule, each with its own delay so a set comes up in order, picked as a file, typed as a command line, or the OSCLeash plugin, which is started through its own manager instead of as a second process. Two big buttons run the whole thing: one arms the watcher, one stops the watcher and everything it started. Nothing this plugin did not start is ever stopped.",
   "summary": "When this program starts, start those - and one big button that stops everything again.",
@@ -19,6 +19,11 @@
     "rule": "name of the rule that is active right now",
     "count": "how many programs this plugin has running",
     "targets": "how many programs are configured in total"
+  },
+  "user_reorderable": true,
+  "chatbox": {
+    "enabled": true,
+    "user_editable": true
   },
   "settings": [
     {

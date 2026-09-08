@@ -1,23 +1,232 @@
 {
   "name": "Example Template",
   "id": "example_template",
-  "version": "1.1.0",
+  "version": "1.4.0",
   "author": "yakuda",
   "description": "A working plugin that shows every part of the plugin API at once: all setting types, all hooks, placeholders, and a custom widget. Enable it, open its Settings, and every control below is live - the labels update, the buttons do something, the log in the panel says which hook fired when. Copy the folder, rename it, delete what you don't need.",
+  "about": {
+    "format": "markdown",
+    "text": [
+      "## What this is",
+      "",
+      "A working plugin that shows **every part of the plugin API at once**:",
+      "all setting types, all hooks, placeholders, and a panel of its own.",
+      "",
+      "## What to do with it",
+      "",
+      "1. Switch it on and open its Settings - every control below is live.",
+      "2. Copy the folder, rename it, delete what you do not need.",
+      "3. Read `main.py` top to bottom; it is ordered the way a plugin runs.",
+      "",
+      "## Why this text looks different",
+      "",
+      "This is the `about` key: a list of lines, or a block with",
+      "`\"format\": \"markdown\"`. `description` stays a plain string so an",
+      "older app - which cannot read `about` - still shows something",
+      "sensible here instead of `{'format': 'markdown', ...}`."
+    ]
+  },
   "short_description": "Copy this folder to start a plugin. Every setting type and every hook, live.",
   "Github": "github.com/yakuda-stack",
   "main": "main.py",
   "image": "logo.png",
+  "unity": "https://github.com/ZenithVal/OSCLeash/releases/download/v2.2.0/OSCLeash.prefab",
   "enabled": false,
   "api": 2,
   "min_app": "v1.3.2",
   "is_linux": true,
   "is_windows": true,
   "template": "{example_template_mood} {example_template_count}",
+  "layout": [
+    "settings",
+    "chatbox"
+  ],
+  "user_reorderable": true,
   "placeholders": {
     "mood": "whatever the Mood dropdown is set to",
     "count": "how often on_tick has fired",
     "ticking": "only present while Count ticks is on"
+  },
+  "chatbox": {
+    "enabled": true,
+    "user_editable": true
+  },
+  "_reference": {
+    "_read_this_first": [
+      "Everything a plugin.json MAY contain, switched off.",
+      "",
+      "JSON has no comment syntax, so the convention here is a leading",
+      "underscore: the app keeps keys it does not know in Plugin.extra and",
+      "never acts on them, which makes _anything a safe place to park a",
+      "setting you are not using yet. To switch one on, move it out of",
+      "this block into the top level and drop the underscore.",
+      "",
+      "This whole _reference block can be deleted. Nothing reads it."
+    ],
+    "_manifest": {
+      "_summary": "older spelling of short_description - use one, not both",
+      "_global_placeholders": {
+        "_note": "placeholders WITHOUT the plugin id in front, for a plugin that owns a name globally. Collides loudly if two plugins claim the same one, so use sparingly.",
+        "now_playing": "what is playing right now"
+      },
+      "_chatbox": {
+        "_note": "enabled:false = this plugin never writes a chatbox line. get_text() and get_lines() are not called and the block disappears from the card. get_values() keeps running, so {example_template_mood} still works. user_editable:true gives the user a switch - which is what this template has turned on at the top level.",
+        "enabled": false,
+        "user_editable": true
+      },
+      "_layout": {
+        "_note": "order of the card's blocks: chatbox, settings, widget. Names you leave out are appended, so [\"widget\"] means 'panel first, rest as before'. This template uses [\"settings\", \"chatbox\"] at the top level.",
+        "_value": [
+          "widget",
+          "settings",
+          "chatbox"
+        ]
+      },
+      "_about_as_a_list": {
+        "_note": "about also takes a plain list of lines when you do not want markdown",
+        "_value": [
+          "First line.",
+          "",
+          "Second paragraph."
+        ]
+      },
+      "_enabled": {
+        "_note": "true = switched on the first time it is installed. Rude unless the plugin is harmless and obvious.",
+        "_value": false
+      },
+      "_api": {
+        "_note": "the plugin API this plugin CANNOT run without. Raising it locks the plugin out of older apps, so leave it at the lowest version that really works and feature-test with api.supports() instead.",
+        "_value": 2
+      },
+      "_min_app": {
+        "_note": "shown to the user when api is too high. Text only, never parsed.",
+        "_value": "v1.4.8"
+      },
+      "_is_linux": {
+        "_note": "false marks the plugin as not installable here. Both default to true.",
+        "_value": true
+      }
+    },
+    "_settings_types": [
+      {
+        "_note": "every row type this app knows. label and hint are optional on all of them; key must be unique across the whole schema, groups included."
+      },
+      {
+        "key": "_a_text",
+        "type": "text",
+        "label": "Text",
+        "default": "hello",
+        "hint": "one line of free text"
+      },
+      {
+        "key": "_a_bool",
+        "type": "bool",
+        "label": "Checkbox",
+        "default": true
+      },
+      {
+        "key": "_an_int",
+        "type": "int",
+        "label": "Number",
+        "default": 5,
+        "min": 0,
+        "max": 100
+      },
+      {
+        "key": "_a_slider",
+        "type": "slider",
+        "label": "Slider",
+        "default": 40,
+        "min": 0,
+        "max": 100,
+        "suffix": " %"
+      },
+      {
+        "key": "_a_choice",
+        "type": "choice",
+        "label": "Dropdown",
+        "default": "b",
+        "options": [
+          {
+            "value": "a",
+            "label": "First"
+          },
+          {
+            "value": "b",
+            "label": "Second"
+          }
+        ]
+      },
+      {
+        "key": "_an_emoji",
+        "type": "emoji",
+        "label": "Icon",
+        "default": "✨"
+      },
+      {
+        "key": "_a_path",
+        "type": "path",
+        "label": "Folder",
+        "default": "",
+        "placeholder": "pick a folder"
+      },
+      {
+        "key": "_a_label",
+        "type": "label",
+        "label": "Read-only",
+        "default": "text the plugin can rewrite with api.set()"
+      },
+      {
+        "key": "_a_button",
+        "type": "action",
+        "label": "Button",
+        "button": "Do it",
+        "style": "accent",
+        "_note": "calls on_action(key); the returned text is shown"
+      },
+      {
+        "key": "_a_widget",
+        "type": "widget",
+        "_note": "not a setting: puts build_widget() at this exact spot. May sit inside a group. This template has one at the top level, so its panel is above the settings rather than under them."
+      },
+      {
+        "key": "_a_group",
+        "type": "group",
+        "label": "Group",
+        "open": false,
+        "items": [
+          {
+            "key": "_inside",
+            "type": "bool",
+            "default": false
+          }
+        ]
+      },
+      {
+        "key": "_a_dependent",
+        "type": "int",
+        "label": "Only when on",
+        "default": 1,
+        "depends": "_a_bool",
+        "_note": "hidden while _a_bool is off. depends_value takes a list for choice rows."
+      },
+      {
+        "key": "_from_the_future",
+        "type": "hologram",
+        "label": "A type this app does not know",
+        "default": "kept anyway",
+        "_note": "There is no \"hologram\" type and there never will be - it is a made-up name. Paste this row back into settings to see what an app does with a type it does not recognise: the row is kept, its value stays readable through api.get(), and the UI says so instead of dropping it silently."
+      }
+    ],
+    "_files": {
+      "_note": "Files a plugin folder may contain. Only 'main' from the top level is imported by the app; everything else is up to you, and anything not imported is simply dead weight the app never touches.",
+      "main.py": "the entry point named by \"main\" - hooks live here",
+      "panel.py": "imported by main.py for build_widget()",
+      "osc_advanced_example.py": "INACTIVE reference. Nothing imports it. Read the header before you copy anything out of it: you do NOT need a socket of your own for chatbox text or for ordinary VRChat parameters - the app already does both. It is only for a plugin that something OUTSIDE VRChat has to reach on a dedicated port: a hardware bridge, a heart-rate app, an OSCLeash-style second tool. Delete the file if that is not you.",
+      "logo.png": "the \"image\" shown in the store",
+      "README.md": "not read by the app - for whoever opens the folder",
+      "configs/": "written BY the app. Never ship one in your zip: it would overwrite the user's settings on update."
+    }
   },
   "settings": [
     {
@@ -26,6 +235,19 @@
       "label": "What this is",
       "default": "Every row below is one setting type. Hover any of them for the hint text.",
       "hint": "A 'label' row is read-only. Its text is an option value, so api.set() can rewrite it at runtime - see the Status row further down."
+    },
+    {
+      "key": "panel_here",
+      "type": "widget",
+      "label": "The panel goes here",
+      "hint": "A {\"type\": \"widget\"} row places build_widget() at this exact spot instead of underneath everything. It may sit inside a group too - that is how a plugin gets its panel above its own Connection block. The row holds no value and never reaches config.json; the key only has to stay unique."
+    },
+    {
+      "key": "layout_note",
+      "type": "label",
+      "label": "Try the blocks",
+      "default": "Grab a grip and drag: this card is set to \"user_reorderable\": true, so Settings and Chatbox swap places and stay that way after a restart.",
+      "hint": "Stored per plugin in configs/config.json under \"layout\". Your \"layout\" in plugin.json is what a user who never dragged anything sees."
     },
     {
       "key": "enabled_demo",
@@ -49,9 +271,18 @@
       "default": "curious",
       "hint": "The stored value is always one of the \"value\" strings, never the label. A plain list of strings works too, then value == label.",
       "choices": [
-        { "value": "curious", "label": "\ud83e\udd14 curious" },
-        { "value": "happy", "label": "\ud83d\ude03 happy" },
-        { "value": "sleepy", "label": "\ud83d\ude34 sleepy" }
+        {
+          "value": "curious",
+          "label": "🤔 curious"
+        },
+        {
+          "value": "happy",
+          "label": "😃 happy"
+        },
+        {
+          "value": "sleepy",
+          "label": "😴 sleepy"
+        }
       ]
     },
     {
@@ -87,7 +318,7 @@
       "key": "icon",
       "type": "emoji",
       "label": "An icon  (type: emoji)",
-      "default": "\u2728",
+      "default": "✨",
       "hint": "A text field with the app's own icon picker behind the button."
     },
     {
@@ -158,13 +389,6 @@
           "hint": "\"style\" is normal | primary | danger. Use danger for anything that destroys something."
         }
       ]
-    },
-    {
-      "key": "from_the_future",
-      "type": "hologram",
-      "label": "A type this app does not know",
-      "default": "kept anyway",
-      "hint": "There is no \"hologram\" type. The row is deliberately here to show what happens: it is kept, its value stays readable through api.get(), and the UI says which version it would need. Delete this row in your own plugin."
     }
   ]
 }

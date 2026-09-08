@@ -1,7 +1,7 @@
 {
   "name": "OSC Parameter Profiles",
   "id": "osc_paramprofiles",
-  "version": "1.1.3",
+  "version": "1.2.0",
   "author": "yakuda",
   "description": "Reads the avatar parameters VRChat is reporting, saves them under a name you choose, and sends them back with one click. Profiles live in categories you make up yourself, the search box looks through names, categories and parameter names, and every profile remembers which avatar it was captured on so loading the wrong one warns you first. Everything runs over OSCQuery: the listen port is chosen by the OS and announced over mDNS so it can never collide with the app's own receiver, the send port is read from VRChat instead of assumed, the parameter list is pulled from VRChat's own OSCQuery tree rather than waiting for a change to be pushed, and after sending a profile the values are read back to say which ones actually took.",
   "short_description": "Save the avatar parameters VRChat reports, load them back with one click.",
@@ -22,6 +22,16 @@
     "category": "its category, if it has one",
     "count": "how many avatar parameters are currently known",
     "avatar": "the current avatar id as VRChat reports it"
+  },
+  "layout": [
+    "widget",
+    "settings",
+    "chatbox"
+  ],
+  "user_reorderable": true,
+  "chatbox": {
+    "enabled": true,
+    "user_editable": true
   },
   "settings": [
     {

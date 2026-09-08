@@ -57,7 +57,9 @@ class TemplatePanel(QWidget):
         box.setSpacing(8)
 
         head = QLabel("This part is build_widget() – a plain QWidget the "
-                      "plugin builds itself.")
+                      "plugin builds itself. It sits here, above the "
+                      "settings, because plugin.json has a "
+                      "{\"type\": \"widget\"} row at this position.")
         head.setObjectName("dim")
         head.setWordWrap(True)
         box.addWidget(head)

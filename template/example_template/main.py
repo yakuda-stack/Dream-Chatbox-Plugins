@@ -59,6 +59,21 @@ def setup(api):
     # folder in its zip - that would overwrite the user's.
     api.ensure_data_dir()
 
+    # The same pattern for the newer manifest keys. None of them is a
+    # hard requirement - an app that does not know "layout" simply
+    # renders the card in its usual order - so none of them belongs in
+    # "api". Ask, log, carry on.
+    for feature, note in (("settings.widget", "the panel can be placed "
+                                              "from the schema"),
+                          ("manifest.layout", "\"layout\" decides the "
+                                              "block order"),
+                          ("manifest.about", "\"about\" is rendered as "
+                                             "markdown"),
+                          ("manifest.chatbox", "a plugin may opt out of "
+                                               "the chatbox")):
+        if api.supports(feature):
+            api.log(f"{feature}: {note}")
+
 
 def teardown():
     """Switched off, or the app is closing.
@@ -116,6 +131,11 @@ def get_values():
 
 def get_text():
     """The plugin's own line, behind {example_template}.
+
+    Not called at all while the user has *Send to the chatbox* off, or
+    while a manifest says "chatbox": {"enabled": false}. get_values()
+    below keeps running either way - the switch is about this plugin
+    writing a line, not about its placeholders inside somebody else's.
 
     Return "" to say nothing this frame - an empty line is dropped, so a
     plugin with nothing to report costs the chatbox nothing.

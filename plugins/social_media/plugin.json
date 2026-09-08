@@ -1,7 +1,7 @@
 {
   "name": "Social Media",
   "id": "social_media",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "author": "yakuda",
   "description": "Your handles in the chatbox: Discord, TikTok, Spotify and Instagram - each one switchable on its own. Discord can additionally show the server and the voice channel you are sitting in right now, read live from the local Discord RPC socket (needs a Discord application of your own, no bot and no data leaves your machine except the one-time login). Everything else is plain text you type in once. All entries can rotate on a timer so the line stays short.",
   "summary": "Discord (live server/voice channel), TikTok, Spotify and Instagram handles - each switchable.",
@@ -30,6 +30,7 @@
     "sm_spotify",
     "sm_instagram"
   ],
+  "user_reorderable": true,
   "settings": [
     {
       "key": "g_discord",

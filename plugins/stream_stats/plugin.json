@@ -1,7 +1,7 @@
 {
   "name": "Stream Stats",
   "id": "stream_stats",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "author": "yakuda",
   "description": "Live Twitch and YouTube data in the chatbox: channel name, stream title, viewer count and the newest chat message. Works without any account in the keyless mode (DecAPI for Twitch, the public live page for YouTube) or with the official APIs for full stability and YouTube chat. Each placeholder picks its own platform - Twitch, YouTube or rotating on a timer.",
   "summary": "Twitch/YouTube name, title, viewers and chat - keyless or via the official APIs.",
@@ -24,6 +24,7 @@
     "s_viewer",
     "s_chat"
   ],
+  "user_reorderable": true,
   "settings": [
     {
       "key": "g_twitch",

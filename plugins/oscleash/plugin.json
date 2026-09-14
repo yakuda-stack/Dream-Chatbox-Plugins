@@ -11,6 +11,7 @@
   "enabled": false,
   "is_linux": true,
   "is_windows": true,
+  "unity": "https://github.com/ZenithVal/OSCLeash/releases/download/v2.2.0/OSCLeash.prefab",
   "template": "🐕 {oscleash_name} {oscleash_dir}",
   "placeholders": {
     "state": "pulled, or ready when nothing is being pulled",

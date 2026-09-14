@@ -1,7 +1,7 @@
 {
   "name": "OSCLeash",
   "id": "oscleash",
-  "version": "2.2.0",
+  "version": "2.2.1",
   "author": "yakuda",
   "description": "Runs ZenithVal's OSCLeash from inside the chatbox - and ships it: the plugin folder already contains OSCLeash and the two libraries it needs, so there is nothing to install, no AUR package, no AppImage and no chmod, on Windows exactly as on Linux. Every leash gets its own process, its own generated Config.json, a Start/Stop button and its own Debug console, so a second leash with its own compass no longer means a second terminal window. The panel adds leashes with the + button, warns about port collisions and switches OSCQuery on where VRChat needs it. On top of that the leash state becomes chatbox placeholders: which leash is being pulled and in which direction. OSCLeash itself is MIT licensed and unmodified apart from one documented import change - see vendor/VENDOR.md.",
   "summary": "OSCLeash included - start, stop and debug any number of leashes, plus placeholders for the chatbox.",

@@ -44,7 +44,7 @@ Dream-Chatbox-Plugins/
 
 ## 🚀 Installing
 
-**From the store (recommended):** Plugins → **Store** → pick a plugin → **Install**. Updates show up as a button on the plugin.
+**From the store (recommended):** Plugins → **Store** → pick a plugin → **Install**. Updates show up as a button on the plugin. Search by name, or by tag (`#weather`, the tag dropdown, or click a tag on a tile – app v1.5.8+).
 
 **From a .zip:** download it from [`zip/`](./zip), then Plugins → **Install plugin from .zip**.
 
@@ -62,6 +62,7 @@ Good to know:
 * **Global placeholders** – list names in `global_placeholders` to use them without the `<plugin_id>_` prefix, e.g. `{player_in_world}`.
 * **Settings are stored per plugin** in `plugins/<plugin_id>/configs/config.json` – and, since app v1.5.7, per profile as well.
 * **`"headless": false`** in `plugin.json` keeps a plugin out of terminal mode (app v1.5.7+).
+* **`"tags": ["weather", "clock"]`** in `plugin.json` makes a plugin findable in the store search and tag filter (app v1.5.8+).
 * **No extra dependencies** – bundle small helpers inside your plugin folder, stdlib only.
 
 The full API is documented in the app: [`docs/PLUGIN_API.md`](https://github.com/yakuda-stack/OSC-DreamChatbox/blob/main/docs/PLUGIN_API.md).

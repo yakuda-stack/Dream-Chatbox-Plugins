@@ -4,7 +4,6 @@
   "version": "2.0.0",
   "author": "Bluscream & yakuda",
   "description": "Extras for Linux from Bluscream's VRCOSC module set - only what the app and the other plugins do not already do. System: RAM and VRAM in GB, network speed, totals and peaks, the active window and the VR mode. Player status: play/pause icon and volume. Programs: which of your programs are running. OpenXR: runtime, session and VR uptime. VRCX: friends online and friend events. VRChat settings: values from VRChat's config.json. Home Assistant, HTTP, IRC, a small server for other programs, and notifications. Every block is off until you switch it on and costs nothing while it is off. CPU, GPU, temperatures and the song title are in the app itself, FPS in World Stats. Based on github.com/Bluscream/VRCOSC-Modules (GPL-3.0).",
-  "summary": "Linux extras from Bluscream's VRCOSC modules: RAM/VRAM in GB, network, active window, player status, programs, OpenXR, VRCX, Home Assistant, HTTP, IRC and more.",
   "Github": "github.com/Bluscream/VRCOSC-Modules",
   "main": "main.py",
   "image": "logo.png",
@@ -1153,5 +1152,14 @@
       "expanded": false
     }
   ],
-  "short_description": "RAM/VRAM in GB, network, window, OpenXR, VRCX, Home Assistant, HTTP, IRC … (Linux)"
+  "short_description": "RAM/VRAM in GB, network, window, OpenXR, VRCX, Home Assistant, HTTP, IRC … (Linux)",
+  "tags": [
+    "linux",
+    "system",
+    "network",
+    "openxr",
+    "vrcx",
+    "home assistant",
+    "vrcosc"
+  ]
 }

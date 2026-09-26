@@ -42,6 +42,17 @@ scrolling past twelve installed plugins.
 `summary` is the older spelling of `short_description` and still works —
 use one of the two, not both.
 
+## Tags: `tags`
+
+```json
+"tags": ["weather", "clock"]
+```
+
+Short words for the **store search and its tag filter** (app v1.5.8+):
+what the plugin is about, not its name. Lower case, up to 8 tags of up
+to 24 characters – a `#`, capitals or a comma separated string are
+cleaned up, never refused. Older apps simply ignore the key.
+
 ## The long text: `about`
 
 JSON has no multi-line string, so a `description` of any length arrives

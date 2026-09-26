@@ -4,7 +4,6 @@
   "version": "1.2.0",
   "author": "yakuda",
   "description": "Your handles in the chatbox: Discord, TikTok, Spotify and Instagram - each one switchable on its own. Discord can additionally show the server and the voice channel you are sitting in right now, read live from the local Discord RPC socket (needs a Discord application of your own, no bot and no data leaves your machine except the one-time login). Everything else is plain text you type in once. All entries can rotate on a timer so the line stays short.",
-  "summary": "Discord (live server/voice channel), TikTok, Spotify and Instagram handles - each switchable.",
   "Github": "github.com/yakuda-stack",
   "main": "main.py",
   "image": "logo.png",
@@ -376,5 +375,13 @@
         }
       ]
     }
+  ],
+  "short_description": "Discord (server, voice channel, who talks, mute), TikTok (followers, viewers – experimental), Spotify and Instagram handles.",
+  "tags": [
+    "social",
+    "discord",
+    "tiktok",
+    "spotify",
+    "instagram"
   ]
 }

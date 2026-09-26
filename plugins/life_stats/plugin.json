@@ -5,6 +5,13 @@
   "author": "yakuda",
   "description": "The values about you rather than about VRChat: a clock with date, a second time zone and the zone name; a countdown to a time or a kitchen timer; the weather where you are, from Open-Meteo without an account; your heart rate from Pulsoid or HypeRate with average, minimum, maximum and trend; and the text of up to three files that other programs keep writing. The clock moved here from World Stats - its settings are taken over on the first start. Every part works on its own, and the placeholder names match the chatbox converter, so a converted MagicChatbox or VRCOSC setup finds them.",
   "short_description": "Clock, countdown, weather, heart rate and text from files.",
+  "tags": [
+    "clock",
+    "weather",
+    "heart rate",
+    "countdown",
+    "files"
+  ],
   "about": {
     "format": "markdown",
     "text": [

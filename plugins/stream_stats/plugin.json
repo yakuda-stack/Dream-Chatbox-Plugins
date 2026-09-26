@@ -4,7 +4,6 @@
   "version": "1.2.0",
   "author": "yakuda",
   "description": "Live Twitch and YouTube data in the chatbox: channel name, stream title, viewer count and the newest chat message. Works without any account in the keyless mode (DecAPI for Twitch, the public live page for YouTube) or with the official APIs for full stability and YouTube chat. Each placeholder picks its own platform - Twitch, YouTube or rotating on a timer.",
-  "summary": "Twitch/YouTube name, title, viewers and chat - keyless or via the official APIs.",
   "Github": "github.com/yakuda-stack",
   "main": "main.py",
   "image": "logo.png",
@@ -411,5 +410,12 @@
         }
       ]
     }
+  ],
+  "short_description": "Twitch/YouTube name, title, viewers and chat, plus Twitch live marker and followers – keyless or via the official APIs.",
+  "tags": [
+    "stream",
+    "twitch",
+    "youtube",
+    "chat"
   ]
 }

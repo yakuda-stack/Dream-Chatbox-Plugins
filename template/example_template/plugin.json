@@ -27,6 +27,11 @@
     ]
   },
   "short_description": "Copy this folder to start a plugin. Every setting type and every hook, live.",
+  "tags": [
+    "template",
+    "developer",
+    "example"
+  ],
   "Github": "github.com/yakuda-stack",
   "main": "main.py",
   "image": "logo.png",

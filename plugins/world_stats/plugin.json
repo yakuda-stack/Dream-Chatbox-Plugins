@@ -4,7 +4,6 @@
   "version": "1.7.0",
   "author": "yakuda",
   "description": "What your chatbox line wants from VRChat and your headset, none of which VRChat sends over OSC. Instance info: how many players are around you, the world name and the access type, region and whether you are the instance master, read from VRChat's output_log - Steam/Proton prefix on Linux, AppData\\\\LocalLow on Windows - with no extra tools - plus the world's capacity from VRChat's public world info. Two session counters: how long you have been in the current instance and how long you have been in VR this session, both taken from the log's own timestamps so they keep counting when the chatbox is restarted mid-session. Your headset battery, read either over adb from the headset itself - Quest, Pico, Vive Focus, no matter whether you stream with WiVRn, ALVR or nothing at all - over the running OpenXR runtime through libmonado, or over SteamVR/OpenVR, with controllers and trackers. And your frame rate: on Linux from a small Vulkan layer the plugin builds and loads into the game itself, so nothing else has to be installed - MangoHud's log still works as an alternative. On Windows from RTSS. The clock moved to the Life Stats plugin in v1.7.0. Every part can be used without the others.",
-  "summary": "Players, world, region and capacity, session timers, headset/controller battery and your frame rate.",
   "Github": "github.com/yakuda-stack",
   "main": "main.py",
   "enabled": true,
@@ -603,5 +602,12 @@
       "hint": "Leave empty for auto-detect - Steam/Proton prefix on Linux, AppData\\\\LocalLow on Windows. Only the players/world rows use this; clock and battery do not touch it."
     }
   ],
-  "short_description": "Players, world, region and capacity, session timers, headset/controller battery and your frame rate."
+  "short_description": "Players, world, region and capacity, session timers, headset/controller battery and your frame rate.",
+  "tags": [
+    "vrchat",
+    "vr",
+    "instance",
+    "battery",
+    "fps"
+  ]
 }

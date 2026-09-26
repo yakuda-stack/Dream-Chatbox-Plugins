@@ -1,7 +1,8 @@
 """The background half of Social Media.
 
-Only Discord needs a thread at all – TikTok, Spotify and Instagram are
-strings the user typed in. The RPC connection lives here, main.py only
+Discord's RPC connection and, since v1.2.0, the (experimental) TikTok
+numbers need a thread – Spotify and Instagram are strings the user
+typed in. The RPC connection lives here, main.py only
 reads the snapshot it leaves behind, so a hanging socket can stall a
 poll but never the chatbox.
 """
@@ -13,6 +14,7 @@ import threading
 import time
 
 from .discordrpc import DiscordRPC, empty_state
+from .tiktok import TikTokStats
 
 TICK = 0.5
 MIN_POLL = 2
@@ -30,6 +32,8 @@ class SocialWorker(threading.Thread):
         self._lock = threading.Lock()
         self._state = empty_state()
         self.rpc = DiscordRPC(log, store_path)
+        self.tiktok = TikTokStats(log)
+        self._tiktok = {"followers": None, "likes": None, "viewers": None}
         self._last_poll = 0.0
         self._sig = None
         self._changed_at = 0.0
@@ -40,7 +44,9 @@ class SocialWorker(threading.Thread):
         """Always a copy, so the caller can never see a half-written
         poll."""
         with self._lock:
-            return dict(self._state)
+            state = dict(self._state)
+            state["tiktok"] = dict(self._tiktok)
+            return state
 
     def stop(self):
         self._stop.set()
@@ -59,7 +65,14 @@ class SocialWorker(threading.Thread):
             self._stop.wait(TICK)
 
     def _tick(self):
-        conf = self._read()["discord"]
+        full = self._read()
+        tt = full.get("tiktok") or {}
+        if tt.get("enabled") and (tt.get("profile") or tt.get("live")):
+            numbers = self.tiktok.poll(tt.get("name"), tt.get("profile"),
+                                       tt.get("live"))
+            with self._lock:
+                self._tiktok = numbers
+        conf = full["discord"]
         now = time.time()
 
         live = bool(conf["enabled"] and conf["live"] and conf["client_id"])
@@ -74,6 +87,13 @@ class SocialWorker(threading.Thread):
                     self._state = empty_state()
             return
         self._live = True
+        self.rpc.want_voice = bool(conf.get("voice"))
+        self.rpc.want_speaking = bool(conf.get("speaking"))
+        if self.rpc.want_speaking and self.rpc.pump():
+            # someone started or stopped talking: publish it now, not
+            # at the next poll
+            with self._lock:
+                self._state["speaking"] = self.rpc.speaking()
 
         # credentials changed -> forget the connection and the token
         sig = (conf["client_id"], conf["client_secret"], conf["redirect"])

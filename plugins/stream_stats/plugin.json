@@ -1,7 +1,7 @@
 {
   "name": "Stream Stats",
   "id": "stream_stats",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "author": "yakuda",
   "description": "Live Twitch and YouTube data in the chatbox: channel name, stream title, viewer count and the newest chat message. Works without any account in the keyless mode (DecAPI for Twitch, the public live page for YouTube) or with the official APIs for full stability and YouTube chat. Each placeholder picks its own platform - Twitch, YouTube or rotating on a timer.",
   "summary": "Twitch/YouTube name, title, viewers and chat - keyless or via the official APIs.",
@@ -16,13 +16,17 @@
     "s_name": "channel name of the platform currently shown",
     "s_status": "stream title, category or uptime",
     "s_viewer": "concurrent viewers",
-    "s_chat": "newest chat message"
+    "s_chat": "newest chat message",
+    "twitch_live": "a marker while the Twitch stream is live",
+    "twitch_followers": "Twitch follower count"
   },
   "global_placeholders": [
     "s_name",
     "s_status",
     "s_viewer",
-    "s_chat"
+    "s_chat",
+    "twitch_live",
+    "twitch_followers"
   ],
   "user_reorderable": true,
   "settings": [
@@ -113,6 +117,29 @@
           "default": false,
           "hint": "Anonymous read-only IRC login, no account and no token needed",
           "depends": "tw_enable"
+        },
+        {
+          "key": "tw_live_text",
+          "type": "text",
+          "label": "Live marker  –  {twitch_live}",
+          "default": "🔴 LIVE",
+          "hint": "Shown while the Twitch stream is live, empty while it is not.",
+          "depends": "tw_enable"
+        },
+        {
+          "key": "tw_followers",
+          "type": "bool",
+          "label": "Follower count  –  {twitch_followers}",
+          "default": false,
+          "hint": "Read from DecAPI in both modes (Twitch only gives it out with a login of the channel owner). Updated every 5 minutes, also while offline.",
+          "depends": "tw_enable"
+        },
+        {
+          "key": "follower_icon",
+          "type": "emoji",
+          "label": "Follower icon",
+          "default": "💜",
+          "depends": "tw_followers"
         }
       ]
     },

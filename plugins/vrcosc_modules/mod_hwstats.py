@@ -25,6 +25,9 @@ KEYS = (
     "hw_net", "hw_net_rx", "hw_net_tx",
     "hw_temp_max", "hw_temp_sys", "hw_fps",
     "hw_vr_mode", "hw_window", "hw_process", "hw_vrchat",
+    # v1.2.0, names as in the chatbox converter
+    "net_max_down", "net_max_up", "net_total_down", "net_total_up",
+    "net_utilization",
 )
 
 # Field order of the file the script writes - documented at the bottom of
@@ -45,6 +48,10 @@ _FIELDS = [
 
 _poller = None
 _script = None
+# network extras: peaks of this session, and the byte counters as they
+# were at the first sample (totals "since the app started")
+_peak = {"rx": 0, "tx": 0}
+_base = None
 _config = None          # (gpu_index, cpu_index, iface, override)
 _out = util.cache_dir("hwstats") / "hwstats.txt"
 
@@ -215,6 +222,7 @@ def values(ctx):
         vals["hw_net_tx"] = _speed(snap.get("net_tx_kibps"))
         vals["hw_net"] = util.join("⬇", vals["hw_net_rx"],
                                    "⬆", vals["hw_net_tx"])
+        _net_extras(ctx, snap, vals)
 
     vals["hw_temp_max"] = temp(snap.get("max_temp"))
     vals["hw_temp_sys"] = temp(snap.get("system_temp"))
@@ -249,6 +257,64 @@ def _name(value, placeholder):
     finds nothing - not worth a slot in the chatbox."""
     value = (value or "").strip()
     return value if value and value != placeholder else None
+
+
+def _net_extras(ctx, snap, vals):
+    """{net_max_down/up} {net_total_down/up} {net_utilization}."""
+    global _base
+    rx, tx = snap.get("net_rx_kibps") or 0, snap.get("net_tx_kibps") or 0
+    _peak["rx"] = max(_peak["rx"], rx)
+    _peak["tx"] = max(_peak["tx"], tx)
+    vals["net_max_down"] = _speed(_peak["rx"]) if _peak["rx"] else None
+    vals["net_max_up"] = _speed(_peak["tx"]) if _peak["tx"] else None
+
+    total_rx = snap.get("net_rx_total_mb")
+    total_tx = snap.get("net_tx_total_mb")
+    if total_rx is not None and total_tx is not None:
+        if _base is None or total_rx < _base[0] or total_tx < _base[1]:
+            # first sample, or the counters were reset (interface
+            # re-created, other iface picked): start counting again
+            _base = (total_rx, total_tx)
+        since_boot = ctx.get("hw_net_total_since", "app") == "boot"
+        down = total_rx if since_boot else total_rx - _base[0]
+        up = total_tx if since_boot else total_tx - _base[1]
+        vals["net_total_down"] = _size(down)
+        vals["net_total_up"] = _size(up)
+
+    link = _link_mbps(ctx.text("hw_iface"))
+    if link:
+        used = (rx + tx) * 1024 * 8 / (link * 1_000_000) * 100
+        vals["net_utilization"] = f"{min(100, round(used))}%"
+
+
+def _size(mb):
+    if mb is None or mb < 0:
+        return None
+    return f"{mb / 1024:.1f} GB" if mb >= 1024 else f"{mb:.0f} MB"
+
+
+def _link_mbps(iface):
+    """Link speed in Mbit/s from /sys/class/net/<iface>/speed - of the
+    chosen interface, or the fastest wired one that is up. Wi-Fi often
+    reports nothing there, then there is no utilisation to show."""
+    import os
+    base = "/sys/class/net"
+    names = [iface] if iface else (os.listdir(base) if os.path.isdir(base)
+                                   else [])
+    best = 0
+    for name in names:
+        if name == "lo":
+            continue
+        try:
+            with open(os.path.join(base, name, "operstate")) as fh:
+                if fh.read().strip() != "up":
+                    continue
+            with open(os.path.join(base, name, "speed")) as fh:
+                speed = int(fh.read().strip())
+        except (OSError, ValueError):
+            continue
+        best = max(best, speed)
+    return best if best > 0 else None
 
 
 def _speed(kibps):

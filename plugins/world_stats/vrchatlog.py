@@ -24,6 +24,12 @@ What we parse (all lines carry a `[Behaviour]` tag):
     - "OnPlayerJoined <name>"                 -> +1 player (incl. yourself)
     - "OnPlayerLeft <name>"                   -> -1 player
     - "OnLeftRoom" / "Successfully left room" -> left the instance
+    - "User Authenticated: <name> (usr_…)"   -> who YOU are (any line)
+
+Region comes out of the instance descriptor (~region(eu)); the world id
+out of the join line, for the capacity lookup in main.py. Who is the
+instance master is not written to the log at all, so that one is a best
+guess from the join order - see _master().
 
 Each line also carries a timestamp, which is where the two session
 counters come from: the join line gives the moment you entered the
@@ -89,6 +95,17 @@ _RE_PLAYER_JOIN = re.compile(
 _RE_PLAYER_LEFT = re.compile(
     r"OnPlayerLeft\s+(.+?)(?:\s+\(usr_[0-9a-fA-F-]+\))?\s*$")
 _RE_LEFT_ROOM = re.compile(r"OnLeftRoom|Successfully left room")
+_RE_REGION = re.compile(r"~region\(([a-z]+)\)")
+_RE_AUTH = re.compile(r"User Authenticated:\s*(.+?)\s+\(usr_[0-9a-fA-F-]+\)")
+
+#: players whose join line arrives this soon after YOUR join line were
+#: already in the instance - VRChat lists everyone present while you
+#: load in. Anyone later joined after you.
+ARRIVAL_WINDOW = 15.0
+
+#: VRChat's instance regions. No region token means US West.
+REGIONS = {"us": "US West", "use": "US East", "usw": "US West",
+           "eu": "Europe", "jp": "Japan"}
 
 # every log line starts with "2026.08.11 05:12:33 Log        -  ..."
 _RE_TIMESTAMP = re.compile(
@@ -147,7 +164,12 @@ class VRChatLogWatcher:
 
         # parsed state (guarded by _lock)
         self._world = ""
+        self._world_id = ""
         self._itype = ""
+        self._region = ""
+        self._me = ""                # your display name, once known
+        self._older = []             # players there before you, in order
+        self._newer = []             # players who came after you
         self._players = set()
         self._in_world = False
         self._joined_at = 0.0        # instance join, from the log clock
@@ -189,11 +211,26 @@ class VRChatLogWatcher:
                 "world": self._world,
                 "instance_type": self._itype,
                 "player_count": len(self._players),
+                "world_id": self._world_id,
+                "region": self._region,
+                "is_master": self._master(),
                 "joined_at": self._joined_at,
                 "session_start": self._session_start,
                 "log_dir": (str(self._cur_path.parent)
                             if self._cur_path else ""),
             }
+
+    def _master(self):
+        """True when you are - probably - the instance master.
+
+        The log never says who the master is. What it does give is the
+        join order, and VRChat hands the master role to whoever has been
+        in the instance longest. So: you are master once nobody who was
+        there before you is left. None while it cannot be told (your own
+        name not seen yet, not in a world). Called under _lock."""
+        if not (self._in_world and self._me and self._me in self._players):
+            return None
+        return not any(p in self._players for p in self._older)
 
     # ----------------------------------------------------------- discovery
     def _library_roots(self):
@@ -281,7 +318,10 @@ class VRChatLogWatcher:
                 self._cur_path = newest
                 self._offset = 0
                 self._world = ""
+                self._world_id = ""
                 self._itype = ""
+                self._region = ""
+                self._older, self._newer = [], []
                 self._players = set()
                 self._in_world = False
                 self._joined_at = 0.0
@@ -315,6 +355,11 @@ class VRChatLogWatcher:
                 if stamp:
                     with self._lock:
                         self._session_start = stamp
+            if "User Authenticated" in raw:
+                m = _RE_AUTH.search(raw)
+                if m:
+                    with self._lock:
+                        self._me = m.group(1).strip()
             if "[Behaviour]" not in raw:
                 continue
             self._parse_line(raw)
@@ -322,9 +367,13 @@ class VRChatLogWatcher:
     def _parse_line(self, line: str):
         m = _RE_JOIN_INSTANCE.search(line)
         if m:
+            region = _RE_REGION.search(m.group(2))
             with self._lock:
                 self._players = set()
+                self._older, self._newer = [], []
+                self._world_id = m.group(1)
                 self._itype = _instance_type(m.group(2))
+                self._region = region.group(1) if region else "us"
                 self._in_world = True
                 self._joined_at = _line_time(line) or time.time()
             return
@@ -338,8 +387,14 @@ class VRChatLogWatcher:
             return
         m = _RE_PLAYER_JOIN.search(line)
         if m:
+            name = m.group(1).strip()
+            at = _line_time(line) or time.time()
             with self._lock:
-                self._players.add(m.group(1).strip())
+                self._players.add(name)
+                if name != self._me:
+                    early = (self._joined_at
+                             and at - self._joined_at <= ARRIVAL_WINDOW)
+                    (self._older if early else self._newer).append(name)
             return
         m = _RE_PLAYER_LEFT.search(line)
         if m:
@@ -349,7 +404,10 @@ class VRChatLogWatcher:
         if _RE_LEFT_ROOM.search(line):
             with self._lock:
                 self._players = set()
+                self._older, self._newer = [], []
                 self._in_world = False
                 self._world = ""
+                self._world_id = ""
                 self._itype = ""
+                self._region = ""
                 self._joined_at = 0.0

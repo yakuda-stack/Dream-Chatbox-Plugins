@@ -105,7 +105,18 @@ def _conf():
             "redirect": _text("dc_redirect", "http://localhost")
                         or "http://localhost",
             "poll": _int("dc_poll_secs", 5, 2, 60),
-        }
+            # v1.2.0 voice details - only asked for while one is on
+            "voice": bool(_get("dc_count", False) or _get("dc_mute", False)
+                          or _get("dc_speaking", False)),
+            "speaking": bool(_get("dc_speaking", False)),
+        },
+        "tiktok": {
+            "enabled": bool(_get("tt_enable", False)),
+            "name": _text("tt_name"),
+            "profile": bool(_get("tt_followers", False)
+                            or _get("tt_likes", False)),
+            "live": bool(_get("tt_viewers", False)),
+        },
     }
 
 
@@ -189,7 +200,12 @@ def get_values():
     """Fills the seven placeholders."""
     vals = {"sm_social": None, "sm_discord": None, "sm_guild": None,
             "sm_channel": None, "sm_tiktok": None, "sm_spotify": None,
-            "sm_instagram": None}
+            "sm_instagram": None,
+            "discord_count": None, "discord_speaking": None,
+            "discord_mute_state": None, "tiktok_host": None,
+            "tiktok_followers": None, "tiktok_likes": None,
+            "tiktok_viewers": None}
+    _extras(vals)
 
     discord, guild, channel = _discord_parts()
     vals["sm_discord"] = discord
@@ -210,6 +226,53 @@ def get_values():
         else:
             vals["sm_social"] = _join(entries)
     return vals
+
+
+def _short(n):
+    """12345 -> 12.3K - follower counts get long."""
+    if n is None:
+        return None
+    if n >= 1_000_000:
+        return f"{n / 1_000_000:.1f}M".replace(".0M", "M")
+    if n >= 10_000:
+        return f"{n / 1_000:.1f}K".replace(".0K", "K")
+    return str(n)
+
+
+def _extras(vals):
+    """v1.2.0: Discord voice details and the (experimental) TikTok
+    numbers. Names as in the chatbox converter."""
+    if _worker is None:
+        return
+    snap = _worker.snapshot()
+    live_dc = (_get("dc_enable", True)
+               and _text("dc_mode", "manual") == "live"
+               and snap.get("connected"))
+    if live_dc:
+        if _get("dc_count", False) and snap.get("count") is not None:
+            icon = _text("dc_count_icon", "\U0001F465")
+            vals["discord_count"] = f"{icon} {snap['count']}".strip()
+        if _get("dc_speaking", False) and snap.get("speaking"):
+            vals["discord_speaking"] = _cut(
+                ", ".join(snap["speaking"]), _limit()) or None
+        if _get("dc_mute", False):
+            if snap.get("deaf"):
+                vals["discord_mute_state"] = _text("dc_deaf_icon",
+                                                   "\U0001F507\U0001F3A7")
+            elif snap.get("mute"):
+                vals["discord_mute_state"] = _text("dc_mute_icon",
+                                                   "\U0001F507")
+    if _get("tt_enable", False):
+        name = _handle(_text("tt_name"))
+        vals["tiktok_host"] = _cut(name, _limit()) or None
+        tt = snap.get("tiktok") or {}
+        if _get("tt_followers", False) and tt.get("followers") is not None:
+            vals["tiktok_followers"] = _short(tt["followers"])
+        if _get("tt_likes", False) and tt.get("likes") is not None:
+            vals["tiktok_likes"] = _short(tt["likes"])
+        if _get("tt_viewers", False) and tt.get("viewers") is not None:
+            icon = _text("tt_viewer_icon", "\U0001F441\ufe0f")
+            vals["tiktok_viewers"] = f"{icon} {tt['viewers']}".strip()
 
 
 def _join(entries):

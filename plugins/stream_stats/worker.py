@@ -101,6 +101,9 @@ class StreamWorker(threading.Thread):
                 state = empty_state()
             else:
                 state = source.fetch(part, want)
+                if key == "twitch" and part.get("followers"):
+                    # offline too: a follower count is not live data
+                    state["followers"] = source.followers(part["channel"])
             with self._lock:
                 self._state[key] = state
 

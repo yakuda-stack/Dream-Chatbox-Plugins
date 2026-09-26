@@ -1,12 +1,15 @@
-"""World Stats – live VRChat instance info, a clock and battery levels.
+"""World Stats – live VRChat instance info, session timers, battery, FPS.
 
-Three things that all want to sit in the same chatbox line, and none of
-which the chatbox itself should have to know about:
+Things that all want to sit in the same chatbox line, and none of which
+the chatbox itself should have to know about:
 
   world      {player_in_world} {group_world} {instance_type}
+             {vrc_region} {vrc_instance_capacity} {vrc_master}
              parsed out of VRChat's output_log by vrchatlog.py, which
              ships next to this file – uninstall the plugin and the log
-             reading and its thread are gone with it.
+             reading and its thread are gone with it. The capacity is
+             the one value the log does not have: capacity.py asks
+             VRChat's public world endpoint for it, once per world.
 
   session    {world_time} {vr_time}
              how long you have been in this instance and how long
@@ -14,14 +17,13 @@ which the chatbox itself should have to know about:
              timestamps, not from a stopwatch started here, so they
              survive restarting the chatbox mid-session.
 
-  clock      {realtime} {realdate} {realday} {realtime_alt}
-             deliberately independent of everything above. It has no
-             connection to the log watcher, needs VRChat neither running
-             nor installed, and keeps working when the world half is
-             switched off entirely. Its own time zone, so the line can
-             show a friend's local time next to yours.
+  clock      MOVED to the Life Stats plugin in v1.7.0 – it never had
+             anything to do with VRChat. The placeholder names stayed
+             the same ({realtime} {realdate} {realday} {realtime_alt}),
+             and Life Stats takes the clock settings over from here.
 
   battery    {hmd_battery} {controller_battery} {tracker_battery}
+             {tracker_lowest_name}
              from battery.py, over adb for a standalone headset or over
              SteamVR/OpenVR for everything else. Also independent – it
              does not care where you are or whether you are in VR at all.
@@ -33,7 +35,6 @@ plain names work everywhere: status texts, Apps custom strings, AIO.
 # Copyright (C) 2026 yakuda
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-import datetime
 import threading
 import time
 
@@ -41,8 +42,8 @@ _api = None
 _watcher = None
 _battery = None
 _fps = None
+_capacity = None
 _warned = False
-_tz_warned = set()
 _app_start = 0.0     # only used by the "since the app started" source
 
 # Read-only rows in the settings block are written from _sync_status(),
@@ -132,7 +133,18 @@ def setup(api):
         _note("monado_status", monado_available()[1], 10 ** 6)
     except Exception:
         pass
+    _announce_move()
     _sync_status()
+
+
+def _announce_move():
+    """The clock left for Life Stats. Say so once in the log - the
+    settings block says it at the top as well."""
+    if _get("clock", False) or any(_get(k) for k in ("clock_date",
+                                                    "clock_alt")):
+        _log("the clock moved to the Life Stats plugin (World Stats "
+             "v1.7.0) - install Life Stats from the store; your clock "
+             "settings are taken over.")
 
 
 def teardown():
@@ -272,6 +284,9 @@ def _needs_log():
     it is set to the VRChat session - on "since the app started" it is
     a plain subtraction and the watcher can stay off."""
     if _get("players", True) or _get("world", True):
+        return True
+    if _get("region", False) or _get("capacity", False) \
+            or _get("master", False):
         return True
     if _get("world_time", False):
         return True
@@ -569,54 +584,6 @@ def _install_later():
     _note("openvr_status", answer, 10 ** 6)
 
 
-# ---------------------------------------------------------------- clock
-def _now(tz_name):
-    """Local time, or the time in a named zone.
-
-    zoneinfo is stdlib, but on Windows it needs the tzdata package, so a
-    bad or unavailable zone falls back to local time instead of leaving
-    the placeholder empty."""
-    tz_name = (tz_name or "").strip()
-    if tz_name:
-        try:
-            from zoneinfo import ZoneInfo
-            return datetime.datetime.now(ZoneInfo(tz_name))
-        except Exception as e:
-            if tz_name not in _tz_warned:
-                _tz_warned.add(tz_name)
-                _log(f"time zone {tz_name!r} unusable ({e}) – "
-                     f"using local time")
-    return datetime.datetime.now()
-
-
-def _fmt(moment, fmt, fallback):
-    try:
-        return moment.strftime(fmt) or None
-    except Exception:
-        return moment.strftime(fallback)
-
-
-def _clock_values(vals):
-    """Fills the clock placeholders. Runs whatever the world half does –
-    no watcher, no log, no VRChat."""
-    if not _get("clock", True):
-        return
-    now = _now(_get("clock_tz", ""))
-    fmt = str(_get("clock_format", "%H:%M")).strip() or "%H:%M"
-    vals["realtime"] = _fmt(now, fmt, "%H:%M")
-
-    if _get("clock_date", False):
-        dfmt = str(_get("date_format", "%d.%m.")).strip() or "%d.%m."
-        vals["realdate"] = _fmt(now, dfmt, "%d.%m.")
-        vals["realday"] = _fmt(now, "%a", "%a")
-
-    if _get("clock_alt", False):
-        afmt = str(_get("alt_format", "%H:%M")).strip() or "%H:%M"
-        alt = _fmt(_now(_get("alt_tz", "")), afmt, "%H:%M")
-        label = str(_get("alt_label", "")).strip()
-        vals["realtime_alt"] = f"{label} {alt}".strip() if alt else None
-
-
 # -------------------------------------------------------------- battery
 _BAR_FULL = "\u25b0"
 _BAR_EMPTY = "\u25b1"
@@ -664,11 +631,15 @@ def _battery_values(vals):
 
     trk = [t for t in snap.get("trackers") or [] if t.get("pct") is not None]
     if trk:
-        lowest = min(t["pct"] for t in trk)
+        low = min(trk, key=lambda t: t["pct"])
+        lowest = low["pct"]
         if lowest <= limit:
             ticon = str(_get("tracker_icon", "") or "").strip()
             suffix = f" \u00d7{len(trk)}" if len(trk) > 1 else ""
             vals["tracker_battery"] = f"{ticon} {lowest}%{suffix}".strip()
+            # which one it is - the model name the runtime reports
+            vals["tracker_lowest_name"] = (low.get("name") or "").strip() \
+                or None
 
 
 # ------------------------------------------------------------------ fps
@@ -791,15 +762,49 @@ def _world_values(vals):
             vals["group_world"] = world
         vals["instance_type"] = (snap.get("instance_type") or "").strip() \
             or None
+    _instance_values(vals, snap)
+
+
+#: {vrc_region}, "short" style
+_REGION_SHORT = {"us": "US-W", "usw": "US-W", "use": "US-E", "eu": "EU",
+                 "jp": "JP"}
+_REGION_FLAG = {"us": "\U0001F1FA\U0001F1F8", "usw": "\U0001F1FA\U0001F1F8",
+                "use": "\U0001F1FA\U0001F1F8", "eu": "\U0001F1EA\U0001F1FA",
+                "jp": "\U0001F1EF\U0001F1F5"}
+
+
+def _instance_values(vals, snap):
+    """{vrc_region} {vrc_instance_capacity} {vrc_master} (v1.7.0)."""
+    global _capacity
+    code = (snap.get("region") or "").strip()
+    if _get("region", False) and code:
+        style = str(_get("region_style", "short"))
+        if style == "flag":
+            vals["vrc_region"] = _REGION_FLAG.get(code) or code.upper()
+        elif style == "long":
+            from .vrchatlog import REGIONS
+            vals["vrc_region"] = REGIONS.get(code, code.upper())
+        else:
+            vals["vrc_region"] = _REGION_SHORT.get(code, code.upper())
+    if _get("capacity", False):
+        if _capacity is None:
+            from .capacity import WorldCapacity
+            _capacity = WorldCapacity(_log)
+        cap = _capacity.get(snap.get("world_id") or "")
+        vals["vrc_instance_capacity"] = str(cap) if cap else None
+    if _get("master", False) and snap.get("is_master"):
+        vals["vrc_master"] = str(_get("master_icon", "\U0001F451")).strip() \
+            or None
 
 
 # --------------------------------------------------------------- values
 KEYS = ("fps", "fps_raw", "frametime", "fps_source",
         "player_in_world", "group_world", "instance_type",
+        "vrc_region", "vrc_instance_capacity", "vrc_master",
         "world_time", "vr_time",
-        "realtime", "realdate", "realday", "realtime_alt",
         "hmd_battery", "hmd_battery_raw", "hmd_battery_icon",
-        "hmd_battery_bar", "controller_battery", "tracker_battery")
+        "hmd_battery_bar", "controller_battery", "tracker_battery",
+        "tracker_lowest_name")
 
 
 #: How long one get_values() pass is reused. The host calls get_lines(),
@@ -826,7 +831,6 @@ def _compute_values():
     """One full pass. Everything expensive in this plugin happens here."""
     vals = {k: None for k in KEYS}
     _world_values(vals)
-    _clock_values(vals)
     _battery_values(vals)
     _fps_values(vals)
     _sync_status()      # same thread as on_tick(), so this is safe here
@@ -855,9 +859,9 @@ def get_values():
 def get_text():
     """The combined line -> {world_stats}."""
     vals = get_values()
-    parts = [vals["player_in_world"], vals["group_world"],
-             vals["world_time"], vals["vr_time"],
-             vals["realtime"], vals["realtime_alt"], vals["hmd_battery"],
+    parts = [vals["vrc_master"], vals["player_in_world"],
+             vals["group_world"], vals["vrc_region"],
+             vals["world_time"], vals["vr_time"], vals["hmd_battery"],
              vals["controller_battery"], vals["fps"]]
     return " | ".join(p for p in parts if p)
 

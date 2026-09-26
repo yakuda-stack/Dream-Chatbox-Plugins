@@ -42,9 +42,12 @@ PRIVMSG_RE = re.compile(
     r"^(?:@[^ ]* )?:([^!]+)![^ ]* PRIVMSG #[^ ]+ :(.*)$")
 
 
+FOLLOWERS_EVERY = 300          # a follower count moves slowly
+
+
 def empty_state(name=""):
     return {"live": False, "name": name, "title": "", "game": "",
-            "uptime": "", "viewers": None}
+            "uptime": "", "viewers": None, "followers": None}
 
 
 class TwitchSource:
@@ -61,6 +64,30 @@ class TwitchSource:
         self._token = ""
         self._token_until = 0.0
         self._warned.clear()
+        self._followers = (None, "", 0.0)
+
+    def followers(self, channel):
+        """Follower count, live or not. Always from DecAPI: Helix only
+        hands the number out with a USER token of the channel, which the
+        client-credentials login here does not have. Cached for
+        FOLLOWERS_EVERY - it moves slowly and costs a request."""
+        channel = (channel or "").strip().lstrip("@")
+        count, cached_for, at = getattr(self, "_followers", (None, "", 0.0))
+        if not channel:
+            return None
+        if cached_for == channel and time.time() - at < FOLLOWERS_EVERY:
+            return count
+        try:
+            raw = request_text(
+                f"{DECAPI}/followcount/{quote(channel, safe='')}").strip()
+            digits = re.sub(r"[^\d]", "", raw)
+            count = int(digits) if digits and raw[:1].isdigit() else None
+        except Exception as e:
+            self._warn("followers", f"Twitch: follower count not "
+                                    f"available ({e})")
+            count = None
+        self._followers = (count, channel, time.time())
+        return count
 
     def _warn(self, key, msg):
         """One line per problem, not one per poll."""

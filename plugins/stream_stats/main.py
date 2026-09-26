@@ -7,6 +7,10 @@ Fills four placeholders:
     {s_viewer}  the concurrent viewer count
     {s_chat}    the newest chat message
 
+and two Twitch-only ones (v1.2.0, names as in the chatbox converter):
+    {twitch_live}       a marker while the Twitch stream is live
+    {twitch_followers}  the follower count, live or not
+
 Each of the four picks its own source: always Twitch, always YouTube, or
 rotating between whichever of them is live right now. Rotation is driven
 by a shared timer, so all four switch together instead of drifting apart
@@ -89,6 +93,7 @@ def _conf():
             "client_id": _text("tw_client_id"),
             "client_secret": _text("tw_client_secret"),
             "chat": bool(_get("tw_chat", False)),
+            "followers": bool(_get("tw_followers", False)),
         },
         "youtube": {
             "enabled": bool(_get("yt_enable", False)),
@@ -177,11 +182,19 @@ def get_values():
     leaves a stray '|' behind while a stream is offline.
     """
     vals = {"s_name": None, "s_status": None,
-            "s_viewer": None, "s_chat": None}
+            "s_viewer": None, "s_chat": None,
+            "twitch_live": None, "twitch_followers": None}
     if _worker is None:
         return vals
     snap = _worker.snapshot()
     conf = _conf()
+    # v1.2.0: the two Twitch-only values the chatbox converter knows
+    if _live(snap, conf, "twitch"):
+        vals["twitch_live"] = _text("tw_live_text", "\U0001F534 LIVE") or None
+    followers = snap["twitch"].get("followers")
+    if conf["twitch"]["enabled"] and followers is not None:
+        icon = _text("follower_icon")
+        vals["twitch_followers"] = f"{icon} {followers}".strip()
 
     platform = _pick("src_name", snap, conf)
     if platform:

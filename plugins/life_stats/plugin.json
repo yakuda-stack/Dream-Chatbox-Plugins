@@ -1,0 +1,559 @@
+{
+  "name": "Life Stats",
+  "id": "life_stats",
+  "version": "1.0.0",
+  "author": "yakuda",
+  "description": "The values about you rather than about VRChat: a clock with date, a second time zone and the zone name; a countdown to a time or a kitchen timer; the weather where you are, from Open-Meteo without an account; your heart rate from Pulsoid or HypeRate with average, minimum, maximum and trend; and the text of up to three files that other programs keep writing. The clock moved here from World Stats - its settings are taken over on the first start. Every part works on its own, and the placeholder names match the chatbox converter, so a converted MagicChatbox or VRCOSC setup finds them.",
+  "short_description": "Clock, countdown, weather, heart rate and text from files.",
+  "about": {
+    "format": "markdown",
+    "text": [
+      "## What it gives you",
+      "",
+      "- **Clock** – `{realtime}` `{realdate}` `{realday}` `{realtime_alt}` `{timezone}`",
+      "- **Countdown** – `{timer}`: to a time (22:00) or as a Start/Stop timer",
+      "- **Weather** – `{weather}` `{weather_temp}` `{weather_feels_like}` `{weather_condition}` `{weather_emoji}` `{weather_humidity}` `{weather_wind}` (Open-Meteo, no key)",
+      "- **Heart rate** – `{heartrate}` `{heartrate_avg}` `{heartrate_min}` `{heartrate_max}` `{heartrate_trend}` (Pulsoid or HypeRate)",
+      "- **Files** – `{file_text}` `{file_text_2}` `{file_text_3}`",
+      "",
+      "## Moved from World Stats",
+      "",
+      "The clock used to be part of World Stats. Your clock settings are copied over automatically the first time this plugin starts."
+    ]
+  },
+  "Github": "github.com/yakuda-stack",
+  "main": "main.py",
+  "enabled": true,
+  "api": 2,
+  "min_app": "v1.4.4",
+  "is_linux": true,
+  "is_windows": true,
+  "headless": true,
+  "image": "logo.png",
+  "template": "{realtime} {timer} {weather} {heartrate}",
+  "placeholders": {
+    "realtime": "your local clock",
+    "realdate": "today's date",
+    "realday": "the weekday, short",
+    "realtime_alt": "the clock in a second time zone",
+    "timezone": "the zone of the clock, e.g. CEST",
+    "timer": "countdown to a time, or a kitchen timer",
+    "weather": "emoji + temperature",
+    "weather_temp": "temperature",
+    "weather_feels_like": "feels like",
+    "weather_condition": "Light rain, Clear …",
+    "weather_emoji": "the weather as an emoji",
+    "weather_humidity": "humidity in %",
+    "weather_wind": "wind speed",
+    "heartrate": "heart rate right now",
+    "heartrate_avg": "average this session",
+    "heartrate_min": "lowest this session",
+    "heartrate_max": "highest this session",
+    "heartrate_trend": "↗ → ↘ over the last minute",
+    "file_text": "contents of file 1",
+    "file_text_2": "contents of file 2",
+    "file_text_3": "contents of file 3"
+  },
+  "global_placeholders": [
+    "realtime",
+    "realdate",
+    "realday",
+    "realtime_alt",
+    "timezone",
+    "timer",
+    "weather",
+    "weather_temp",
+    "weather_feels_like",
+    "weather_condition",
+    "weather_emoji",
+    "weather_humidity",
+    "weather_wind",
+    "heartrate",
+    "heartrate_avg",
+    "heartrate_min",
+    "heartrate_max",
+    "heartrate_trend",
+    "file_text",
+    "file_text_2",
+    "file_text_3"
+  ],
+  "settings": [
+    {
+      "key": "clock_group",
+      "type": "group",
+      "label": "Clock",
+      "expanded": false,
+      "hint": "Moved here from World Stats. Your clock settings from there are taken over on the first start. Needs no VRChat, no log and no headset.",
+      "items": [
+        {
+          "key": "clock",
+          "type": "bool",
+          "label": "Local time  –  {realtime}",
+          "default": true
+        },
+        {
+          "key": "clock_format",
+          "type": "text",
+          "label": "Clock format",
+          "default": "%H:%M",
+          "hint": "strftime, e.g. %H:%M (21:45) or %I:%M %p (09:45 PM)",
+          "depends": "clock"
+        },
+        {
+          "key": "clock_tz",
+          "type": "text",
+          "label": "Time zone",
+          "default": "",
+          "placeholder": "empty = your system time",
+          "hint": "An IANA name like Europe/Berlin or America/New_York. Leave empty to follow the system clock. On Windows this needs the tzdata package; if a zone cannot be loaded the plugin falls back to local time and says so in the log.",
+          "depends": "clock"
+        },
+        {
+          "key": "clock_date",
+          "type": "bool",
+          "label": "Also date and weekday  –  {realdate} {realday}",
+          "default": false,
+          "depends": "clock"
+        },
+        {
+          "key": "date_format",
+          "type": "text",
+          "label": "Date format",
+          "default": "%d.%m.",
+          "hint": "strftime again, e.g. %d.%m. (24.08.) or %b %d (Aug 24)",
+          "depends": "clock_date"
+        },
+        {
+          "key": "clock_zone",
+          "type": "bool",
+          "label": "Time zone name  –  {timezone}",
+          "default": false,
+          "hint": "The zone of the clock above: CEST, UTC+2 … Handy next to {realtime} for people abroad.",
+          "depends": "clock"
+        },
+        {
+          "key": "zone_style",
+          "type": "choice",
+          "label": "Written as",
+          "default": "short",
+          "depends": "clock_zone",
+          "choices": [
+            {
+              "value": "short",
+              "label": "Short  –  CEST"
+            },
+            {
+              "value": "offset",
+              "label": "Offset  –  UTC+2"
+            },
+            {
+              "value": "iana",
+              "label": "Name  –  Europe/Berlin (if a zone is set)"
+            }
+          ]
+        },
+        {
+          "key": "clock_alt",
+          "type": "bool",
+          "label": "Second time zone  –  {realtime_alt}",
+          "default": false,
+          "hint": "A second clock next to yours - handy when the people you talk to are in another country.",
+          "depends": "clock"
+        },
+        {
+          "key": "alt_tz",
+          "type": "text",
+          "label": "Second zone",
+          "default": "America/New_York",
+          "hint": "IANA name, same as above",
+          "depends": "clock_alt"
+        },
+        {
+          "key": "alt_format",
+          "type": "text",
+          "label": "Second zone format",
+          "default": "%H:%M",
+          "depends": "clock_alt"
+        },
+        {
+          "key": "alt_label",
+          "type": "text",
+          "label": "Second zone prefix",
+          "default": "NY",
+          "hint": "Written in front of the second clock, empty for none",
+          "depends": "clock_alt"
+        }
+      ]
+    },
+    {
+      "key": "timer_group",
+      "type": "group",
+      "label": "Countdown",
+      "expanded": false,
+      "hint": "Counts down to a time, or runs as a kitchen timer.",
+      "items": [
+        {
+          "key": "timer",
+          "type": "bool",
+          "label": "Countdown  –  {timer}",
+          "default": false
+        },
+        {
+          "key": "timer_status",
+          "type": "label",
+          "label": "Status",
+          "default": "off"
+        },
+        {
+          "key": "timer_mode",
+          "type": "choice",
+          "label": "Mode",
+          "default": "until",
+          "depends": "timer",
+          "choices": [
+            {
+              "value": "until",
+              "label": "Until a time  –  always running"
+            },
+            {
+              "value": "duration",
+              "label": "Timer  –  Start / Stop"
+            }
+          ]
+        },
+        {
+          "key": "timer_target",
+          "type": "text",
+          "label": "Count down to",
+          "default": "22:00",
+          "placeholder": "22:00 or 2026-12-31 23:59",
+          "hint": "A time (every day, the next one) or a date and time (once). Also 31.12.2026 23:59.",
+          "depends": "timer_mode",
+          "depends_value": "until"
+        },
+        {
+          "key": "timer_minutes",
+          "type": "int",
+          "label": "Minutes",
+          "default": 10,
+          "min": 1,
+          "max": 1440,
+          "depends": "timer_mode",
+          "depends_value": "duration"
+        },
+        {
+          "key": "timer_start",
+          "type": "action",
+          "label": "Timer",
+          "button": "Start",
+          "depends": "timer_mode",
+          "depends_value": "duration",
+          "hint": "Starts (or restarts) the timer with the minutes above. It keeps running across an app restart."
+        },
+        {
+          "key": "timer_stop",
+          "type": "action",
+          "label": "",
+          "button": "Stop",
+          "depends": "timer_mode",
+          "depends_value": "duration"
+        },
+        {
+          "key": "timer_label",
+          "type": "text",
+          "label": "Text in front",
+          "default": "",
+          "placeholder": "e.g. Stream ends in",
+          "depends": "timer"
+        },
+        {
+          "key": "timer_icon",
+          "type": "emoji",
+          "label": "Icon",
+          "default": "⏳",
+          "depends": "timer"
+        },
+        {
+          "key": "timer_style",
+          "type": "choice",
+          "label": "How to write it",
+          "default": "auto",
+          "depends": "timer",
+          "choices": [
+            {
+              "value": "auto",
+              "label": "Short  –  1h 05m / 4m 12s"
+            },
+            {
+              "value": "clock",
+              "label": "Clock  –  1:05:00"
+            }
+          ]
+        },
+        {
+          "key": "timer_done",
+          "type": "text",
+          "label": "When it is over",
+          "default": "",
+          "placeholder": "empty = hide it",
+          "hint": "Shown once the countdown reached zero, e.g. ⏰ Time's up!",
+          "depends": "timer"
+        }
+      ]
+    },
+    {
+      "key": "weather_group",
+      "type": "group",
+      "label": "Weather",
+      "expanded": false,
+      "hint": "From Open-Meteo: free, no account, no API key. Asks every few minutes, only while this is on.",
+      "items": [
+        {
+          "key": "weather",
+          "type": "bool",
+          "label": "Weather  –  {weather} {weather_temp} …",
+          "default": false
+        },
+        {
+          "key": "weather_status",
+          "type": "label",
+          "label": "Status",
+          "default": "off"
+        },
+        {
+          "key": "weather_place",
+          "type": "text",
+          "label": "Place",
+          "default": "",
+          "placeholder": "Berlin, DE",
+          "hint": "A city, optionally with the country code (Springfield, US), or coordinates like 52.52,13.41.",
+          "depends": "weather"
+        },
+        {
+          "key": "weather_now",
+          "type": "action",
+          "label": "Update",
+          "button": "Now",
+          "depends": "weather"
+        },
+        {
+          "key": "weather_unit",
+          "type": "choice",
+          "label": "Temperature",
+          "default": "celsius",
+          "depends": "weather",
+          "choices": [
+            {
+              "value": "celsius",
+              "label": "°C"
+            },
+            {
+              "value": "fahrenheit",
+              "label": "°F"
+            }
+          ]
+        },
+        {
+          "key": "weather_wind_unit",
+          "type": "choice",
+          "label": "Wind",
+          "default": "kmh",
+          "depends": "weather",
+          "choices": [
+            {
+              "value": "kmh",
+              "label": "km/h"
+            },
+            {
+              "value": "mph",
+              "label": "mph"
+            }
+          ]
+        },
+        {
+          "key": "weather_lang",
+          "type": "choice",
+          "label": "Language of {weather_condition}",
+          "default": "en",
+          "depends": "weather",
+          "choices": [
+            {
+              "value": "en",
+              "label": "English  –  Light rain"
+            },
+            {
+              "value": "de",
+              "label": "Deutsch  –  Leichter Regen"
+            }
+          ]
+        },
+        {
+          "key": "weather_show_emoji",
+          "type": "bool",
+          "label": "Emoji in {weather}",
+          "default": true,
+          "depends": "weather"
+        },
+        {
+          "key": "weather_every",
+          "type": "slider",
+          "label": "Update every",
+          "default": 15,
+          "min": 5,
+          "max": 60,
+          "suffix": " min",
+          "depends": "weather",
+          "hint": "Open-Meteo refreshes its data every 15 minutes - asking more often gives the same answer."
+        }
+      ]
+    },
+    {
+      "key": "heartrate_group",
+      "type": "group",
+      "label": "Heart rate",
+      "expanded": false,
+      "hint": "From Pulsoid or HypeRate - whatever your watch or chest strap already sends to.",
+      "items": [
+        {
+          "key": "heartrate",
+          "type": "bool",
+          "label": "Heart rate  –  {heartrate}",
+          "default": false,
+          "hint": "Also {heartrate_avg} {heartrate_min} {heartrate_max} (this session) and {heartrate_trend} (↗ → ↘)."
+        },
+        {
+          "key": "heartrate_status",
+          "type": "label",
+          "label": "Status",
+          "default": "off"
+        },
+        {
+          "key": "heartrate_source",
+          "type": "choice",
+          "label": "Source",
+          "default": "pulsoid",
+          "depends": "heartrate",
+          "choices": [
+            {
+              "value": "pulsoid",
+              "label": "Pulsoid"
+            },
+            {
+              "value": "hyperate",
+              "label": "HypeRate"
+            }
+          ]
+        },
+        {
+          "key": "pulsoid_token",
+          "type": "text",
+          "label": "Pulsoid token",
+          "default": "",
+          "secret": true,
+          "hint": "pulsoid.net → Settings → Tokens → create a manual token with data:heart_rate:read. Stored in plain text in this plugin's config.json.",
+          "depends": "heartrate_source",
+          "depends_value": "pulsoid"
+        },
+        {
+          "key": "hyperate_id",
+          "type": "text",
+          "label": "HypeRate ID",
+          "default": "",
+          "placeholder": "the ID the HypeRate app shows",
+          "depends": "heartrate_source",
+          "depends_value": "hyperate"
+        },
+        {
+          "key": "hyperate_key",
+          "type": "text",
+          "label": "HypeRate API key",
+          "default": "",
+          "secret": true,
+          "hint": "HypeRate only lets apps in with a key of their own - request one from HypeRate (free for personal use).",
+          "depends": "heartrate_source",
+          "depends_value": "hyperate"
+        },
+        {
+          "key": "heartrate_icon",
+          "type": "emoji",
+          "label": "Icon",
+          "default": "❤️",
+          "depends": "heartrate"
+        },
+        {
+          "key": "heartrate_unit",
+          "type": "bool",
+          "label": "Write \"bpm\" after the number",
+          "default": false,
+          "depends": "heartrate"
+        },
+        {
+          "key": "heartrate_reset",
+          "type": "action",
+          "label": "Average / min / max",
+          "button": "Reset",
+          "depends": "heartrate"
+        }
+      ]
+    },
+    {
+      "key": "files_group",
+      "type": "group",
+      "label": "Text from a file",
+      "expanded": false,
+      "hint": "Shows what is in a text file and follows it when it changes - a now-playing file for OBS, a counter your script writes, a note.",
+      "items": [
+        {
+          "key": "files",
+          "type": "bool",
+          "label": "Text from files  –  {file_text}",
+          "default": false
+        },
+        {
+          "key": "file_path",
+          "type": "path",
+          "label": "File 1  –  {file_text}",
+          "default": "",
+          "mode": "file",
+          "depends": "files"
+        },
+        {
+          "key": "file_path_2",
+          "type": "path",
+          "label": "File 2  –  {file_text_2}",
+          "default": "",
+          "mode": "file",
+          "placeholder": "optional",
+          "depends": "files"
+        },
+        {
+          "key": "file_path_3",
+          "type": "path",
+          "label": "File 3  –  {file_text_3}",
+          "default": "",
+          "mode": "file",
+          "placeholder": "optional",
+          "depends": "files"
+        },
+        {
+          "key": "file_max",
+          "type": "slider",
+          "label": "Max length",
+          "default": 60,
+          "min": 10,
+          "max": 144,
+          "suffix": " chars",
+          "depends": "files"
+        },
+        {
+          "key": "file_keep_lines",
+          "type": "bool",
+          "label": "Keep line breaks",
+          "default": false,
+          "depends": "files",
+          "hint": "Off: all lines of the file become one line."
+        }
+      ]
+    }
+  ]
+}

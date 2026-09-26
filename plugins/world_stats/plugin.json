@@ -1,10 +1,10 @@
 {
   "name": "World Stats",
   "id": "world_stats",
-  "version": "1.6.0",
+  "version": "1.7.0",
   "author": "yakuda",
-  "description": "Four things your chatbox line usually wants and VRChat does not send over OSC. Instance info: how many players are around you, the world name and the access type, read from VRChat's output_log - Steam/Proton prefix on Linux, AppData\\\\LocalLow on Windows - with no extra tools. Two session counters: how long you have been in the current instance and how long you have been in VR this session, both taken from the log's own timestamps so they keep counting when the chatbox is restarted mid-session. A clock that stands on its own: it has no connection to the log watcher and keeps running when VRChat is closed, with an optional date, weekday and a second time zone for friends abroad. Your headset battery, read either over adb from the headset itself - Quest, Pico, Vive Focus, no matter whether you stream with WiVRn, ALVR or nothing at all - over the running OpenXR runtime through libmonado, or over SteamVR/OpenVR. And your frame rate: on Linux from a small Vulkan layer the plugin builds and loads into the game itself, so nothing else has to be installed - MangoHud's log still works as an alternative. On Windows from RTSS, because VRChat renders D3D11 there and a Vulkan layer would never see it. Every part can be used without the others.",
-  "summary": "Players, world and instance type, a standalone clock, headset/controller battery, and your frame rate.",
+  "description": "What your chatbox line wants from VRChat and your headset, none of which VRChat sends over OSC. Instance info: how many players are around you, the world name and the access type, region and whether you are the instance master, read from VRChat's output_log - Steam/Proton prefix on Linux, AppData\\\\LocalLow on Windows - with no extra tools - plus the world's capacity from VRChat's public world info. Two session counters: how long you have been in the current instance and how long you have been in VR this session, both taken from the log's own timestamps so they keep counting when the chatbox is restarted mid-session. Your headset battery, read either over adb from the headset itself - Quest, Pico, Vive Focus, no matter whether you stream with WiVRn, ALVR or nothing at all - over the running OpenXR runtime through libmonado, or over SteamVR/OpenVR, with controllers and trackers. And your frame rate: on Linux from a small Vulkan layer the plugin builds and loads into the game itself, so nothing else has to be installed - MangoHud's log still works as an alternative. On Windows from RTSS. The clock moved to the Life Stats plugin in v1.7.0. Every part can be used without the others.",
+  "summary": "Players, world, region and capacity, session timers, headset/controller battery and your frame rate.",
   "Github": "github.com/yakuda-stack",
   "main": "main.py",
   "enabled": true,
@@ -13,7 +13,7 @@
   "is_linux": true,
   "is_windows": true,
   "image": "logo.png",
-  "template": "{player_in_world} {group_world} \\n {realtime} {fps} {hmd_battery}",
+  "template": "{vrc_master} {player_in_world} {group_world} \\n {fps} {hmd_battery}",
   "placeholders": {
     "fps": "frames per second, icon + number",
     "fps_raw": "frames per second, the bare number",
@@ -24,16 +24,16 @@
     "instance_type": "Public / Friends+ / Invite …",
     "world_time": "how long you have been in this instance",
     "vr_time": "how long VRChat has been running",
-    "realtime": "your local clock",
-    "realdate": "today's date",
-    "realday": "the weekday, short",
-    "realtime_alt": "the clock in a second time zone",
     "hmd_battery": "headset charge, icon + percent",
     "hmd_battery_raw": "headset charge, the bare number",
     "hmd_battery_icon": "just the icon, charging aware",
     "hmd_battery_bar": "headset charge as ▰▰▰▱▱",
     "controller_battery": "controller charge, left and right",
-    "tracker_battery": "the emptiest tracker"
+    "tracker_battery": "the emptiest tracker",
+    "vrc_region": "instance region: EU, US-W, US-E, JP",
+    "vrc_instance_capacity": "how many people fit into the world",
+    "vrc_master": "an icon while you are the instance master (best guess)",
+    "tracker_lowest_name": "which tracker is the emptiest"
   },
   "global_placeholders": [
     "fps",
@@ -45,19 +45,26 @@
     "instance_type",
     "world_time",
     "vr_time",
-    "realtime",
-    "realdate",
-    "realday",
-    "realtime_alt",
     "hmd_battery",
     "hmd_battery_raw",
     "hmd_battery_icon",
     "hmd_battery_bar",
     "controller_battery",
-    "tracker_battery"
+    "tracker_battery",
+    "vrc_region",
+    "vrc_instance_capacity",
+    "vrc_master",
+    "tracker_lowest_name"
   ],
   "user_reorderable": true,
   "settings": [
+    {
+      "key": "moved_note",
+      "type": "label",
+      "label": "ℹ️ Moved",
+      "default": "The clock ({realtime} {realdate} {realday} {realtime_alt}) now lives in the Life Stats plugin - install it from the store, your clock settings are taken over.",
+      "hint": "World Stats v1.7.0 keeps what comes from VRChat and your headset. Clock, countdown, weather and heart rate are in Life Stats."
+    },
     {
       "key": "players",
       "type": "bool",
@@ -88,6 +95,63 @@
       "suffix": " chars",
       "hint": "Longer names are cut off - the chatbox has limited space",
       "depends": "world"
+    },
+    {
+      "key": "instance_group",
+      "type": "group",
+      "label": "Instance details",
+      "expanded": false,
+      "hint": "More about the instance you are in. Region and master come from the VRChat log, the capacity from VRChat's public world info (asked once per world, no login).",
+      "items": [
+        {
+          "key": "region",
+          "type": "bool",
+          "label": "Region  –  {vrc_region}",
+          "default": false
+        },
+        {
+          "key": "region_style",
+          "type": "choice",
+          "label": "Written as",
+          "default": "short",
+          "depends": "region",
+          "choices": [
+            {
+              "value": "short",
+              "label": "Short  –  EU, US-W, US-E, JP"
+            },
+            {
+              "value": "long",
+              "label": "Long  –  Europe, US West …"
+            },
+            {
+              "value": "flag",
+              "label": "Flag  –  🇪🇺"
+            }
+          ]
+        },
+        {
+          "key": "capacity",
+          "type": "bool",
+          "label": "World capacity  –  {vrc_instance_capacity}",
+          "default": false,
+          "hint": "How many people fit into the world, e.g. {player_in_world}/{vrc_instance_capacity}. Needs internet once per world."
+        },
+        {
+          "key": "master",
+          "type": "bool",
+          "label": "Instance master  –  {vrc_master}",
+          "default": false,
+          "hint": "Shows the icon while you are the instance master. VRChat does not log who the master is, so this is a best guess from the join order: you are master once everyone who was there before you has left."
+        },
+        {
+          "key": "master_icon",
+          "type": "emoji",
+          "label": "Master icon",
+          "default": "👑",
+          "depends": "master"
+        }
+      ]
     },
     {
       "key": "fps_group",
@@ -325,84 +389,6 @@
       ]
     },
     {
-      "key": "clock_group",
-      "type": "group",
-      "label": "Clock",
-      "expanded": false,
-      "hint": "Completely independent of the two rows above. The clock needs no log file, no VRChat and no headset - switch players and world name off and this keeps running on its own.",
-      "items": [
-        {
-          "key": "clock",
-          "type": "bool",
-          "label": "Local time  –  {realtime}",
-          "default": true
-        },
-        {
-          "key": "clock_format",
-          "type": "text",
-          "label": "Clock format",
-          "default": "%H:%M",
-          "hint": "strftime, e.g. %H:%M (21:45) or %I:%M %p (09:45 PM)",
-          "depends": "clock"
-        },
-        {
-          "key": "clock_tz",
-          "type": "text",
-          "label": "Time zone",
-          "default": "",
-          "placeholder": "empty = your system time",
-          "hint": "An IANA name like Europe/Berlin or America/New_York. Leave empty to follow the system clock. On Windows this needs the tzdata package; if a zone cannot be loaded the plugin falls back to local time and says so in the log.",
-          "depends": "clock"
-        },
-        {
-          "key": "clock_date",
-          "type": "bool",
-          "label": "Also date and weekday  –  {realdate} {realday}",
-          "default": false,
-          "depends": "clock"
-        },
-        {
-          "key": "date_format",
-          "type": "text",
-          "label": "Date format",
-          "default": "%d.%m.",
-          "hint": "strftime again, e.g. %d.%m. (24.08.) or %b %d (Aug 24)",
-          "depends": "clock_date"
-        },
-        {
-          "key": "clock_alt",
-          "type": "bool",
-          "label": "Second time zone  –  {realtime_alt}",
-          "default": false,
-          "hint": "A second clock next to yours - handy when the people you talk to are in another country.",
-          "depends": "clock"
-        },
-        {
-          "key": "alt_tz",
-          "type": "text",
-          "label": "Second zone",
-          "default": "America/New_York",
-          "hint": "IANA name, same as above",
-          "depends": "clock_alt"
-        },
-        {
-          "key": "alt_format",
-          "type": "text",
-          "label": "Second zone format",
-          "default": "%H:%M",
-          "depends": "clock_alt"
-        },
-        {
-          "key": "alt_label",
-          "type": "text",
-          "label": "Second zone prefix",
-          "default": "NY",
-          "hint": "Written in front of the second clock, empty for none",
-          "depends": "clock_alt"
-        }
-      ]
-    },
-    {
       "key": "battery_group",
       "type": "group",
       "label": "Headset battery",
@@ -482,7 +468,7 @@
         {
           "key": "battery_controllers",
           "type": "bool",
-          "label": "Controllers and trackers too  –  {controller_battery} {tracker_battery}",
+          "label": "Controllers and trackers too  –  {controller_battery} {tracker_battery} {tracker_lowest_name}",
           "default": true,
           "hint": "WiVRn/Monado and SteamVR only – Android knows nothing about the controllers, so this stays empty on the adb backend.",
           "depends": "battery"
@@ -616,5 +602,6 @@
       "placeholder": "empty = auto-detect",
       "hint": "Leave empty for auto-detect - Steam/Proton prefix on Linux, AppData\\\\LocalLow on Windows. Only the players/world rows use this; clock and battery do not touch it."
     }
-  ]
+  ],
+  "short_description": "Players, world, region and capacity, session timers, headset/controller battery and your frame rate."
 }

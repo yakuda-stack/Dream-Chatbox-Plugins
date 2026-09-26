@@ -1,0 +1,4 @@
+# Python caches and the personal settings every plugin writes next to itself
+__pycache__/
+*.pyc
+configs/

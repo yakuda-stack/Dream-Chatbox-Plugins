@@ -1,7 +1,7 @@
 {
   "name": "VRCOSC Modules (Linux)",
   "id": "vrcosc_modules",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "author": "Bluscream & yakuda",
   "description": "Bluscream's VRCOSC module set, ported to Linux and to the OSC-DreamChatbox plugin system: hardware stats, MPRIS media, a process watcher, OpenXR runtime and session, Home Assistant, a generic HTTP poller, a REST/MCP server, an IRC bridge, VRCX, VRChat's config and notifications to desktop, XSOverlay or a webhook. Every block has its own enable switch and starts nothing while it is off. Based on github.com/Bluscream/VRCOSC-Modules (GPL-3.0); his vrcosc_hwstats.sh and vrcosc_mpris_query.sh ship unchanged.",
   "summary": "Eleven Linux blocks: hardware, media, processes, OpenXR, Home Assistant, HTTP, MCP server, IRC, VRCX, VRChat config, notifications.",
@@ -89,7 +89,12 @@
     "vc_all": "both values in one string",
     "vc_status": "icon while config.json was found",
     "nt_last": "text of the last notification",
-    "nt_count": "notifications sent"
+    "nt_count": "notifications sent",
+    "net_max_down": "fastest download this session",
+    "net_max_up": "fastest upload this session",
+    "net_total_down": "downloaded (since app start or boot)",
+    "net_total_up": "uploaded (since app start or boot)",
+    "net_utilization": "how much of the link speed is in use"
   },
   "global_placeholders": [
     "hw_cpu",
@@ -168,7 +173,12 @@
     "vc_all",
     "vc_status",
     "nt_last",
-    "nt_count"
+    "nt_count",
+    "net_max_down",
+    "net_max_up",
+    "net_total_down",
+    "net_total_up",
+    "net_utilization"
   ],
   "user_reorderable": true,
   "settings": [
@@ -220,6 +230,24 @@
           "label": "Network  –  {hw_net}",
           "default": false,
           "depends": "hw_enable"
+        },
+        {
+          "key": "hw_net_total_since",
+          "type": "choice",
+          "label": "Totals count since",
+          "default": "app",
+          "depends": "hw_show_net",
+          "hint": "Also {net_max_down} {net_max_up} (peaks this session), {net_total_down} {net_total_up} and {net_utilization} (of the link speed, wired only).",
+          "choices": [
+            {
+              "value": "app",
+              "label": "The app started"
+            },
+            {
+              "value": "boot",
+              "label": "The PC started"
+            }
+          ]
         },
         {
           "key": "hw_show_fps",

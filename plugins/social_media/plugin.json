@@ -1,7 +1,7 @@
 {
   "name": "Social Media",
   "id": "social_media",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "author": "yakuda",
   "description": "Your handles in the chatbox: Discord, TikTok, Spotify and Instagram - each one switchable on its own. Discord can additionally show the server and the voice channel you are sitting in right now, read live from the local Discord RPC socket (needs a Discord application of your own, no bot and no data leaves your machine except the one-time login). Everything else is plain text you type in once. All entries can rotate on a timer so the line stays short.",
   "summary": "Discord (live server/voice channel), TikTok, Spotify and Instagram handles - each switchable.",
@@ -19,7 +19,14 @@
     "sm_channel": "Discord voice channel you are sitting in",
     "sm_tiktok": "TikTok handle",
     "sm_spotify": "Spotify name",
-    "sm_instagram": "Instagram handle"
+    "sm_instagram": "Instagram handle",
+    "discord_count": "people in your Discord voice channel",
+    "discord_speaking": "who is talking in it",
+    "discord_mute_state": "an icon while you are muted / deafened",
+    "tiktok_host": "your TikTok handle",
+    "tiktok_followers": "TikTok followers (experimental)",
+    "tiktok_likes": "TikTok likes, profile total (experimental)",
+    "tiktok_viewers": "TikTok live viewers (experimental)"
   },
   "global_placeholders": [
     "sm_social",
@@ -28,7 +35,14 @@
     "sm_channel",
     "sm_tiktok",
     "sm_spotify",
-    "sm_instagram"
+    "sm_instagram",
+    "discord_count",
+    "discord_speaking",
+    "discord_mute_state",
+    "tiktok_host",
+    "tiktok_followers",
+    "tiktok_likes",
+    "tiktok_viewers"
   ],
   "user_reorderable": true,
   "settings": [
@@ -144,6 +158,53 @@
           "default": "🎧",
           "hint": "Prefix in front of the Discord entry, empty for none",
           "depends": "dc_enable"
+        },
+        {
+          "key": "dc_count",
+          "type": "bool",
+          "label": "People in the channel  –  {discord_count}",
+          "default": false,
+          "depends": "dc_mode",
+          "depends_value": "live"
+        },
+        {
+          "key": "dc_count_icon",
+          "type": "emoji",
+          "label": "People icon",
+          "default": "👥",
+          "depends": "dc_count"
+        },
+        {
+          "key": "dc_speaking",
+          "type": "bool",
+          "label": "Who is talking  –  {discord_speaking}",
+          "default": false,
+          "depends": "dc_mode",
+          "depends_value": "live",
+          "hint": "Follows within half a second on Linux; on Windows it updates with the check interval above."
+        },
+        {
+          "key": "dc_mute",
+          "type": "bool",
+          "label": "Muted / deafened  –  {discord_mute_state}",
+          "default": false,
+          "depends": "dc_mode",
+          "depends_value": "live",
+          "hint": "An icon while you are muted or deafened in Discord, empty otherwise."
+        },
+        {
+          "key": "dc_mute_icon",
+          "type": "emoji",
+          "label": "Muted icon",
+          "default": "🔇",
+          "depends": "dc_mute"
+        },
+        {
+          "key": "dc_deaf_icon",
+          "type": "text",
+          "label": "Deafened icon",
+          "default": "🔇🎧",
+          "depends": "dc_mute"
         }
       ]
     },
@@ -172,6 +233,42 @@
           "label": "TikTok icon",
           "default": "🎵",
           "depends": "tt_enable"
+        },
+        {
+          "key": "tt_note",
+          "type": "label",
+          "label": "⚠️ Experimental",
+          "default": "TikTok has no public API - the numbers are read from its public pages and may stop working when TikTok changes them.",
+          "depends": "tt_enable"
+        },
+        {
+          "key": "tt_followers",
+          "type": "bool",
+          "label": "Followers  –  {tiktok_followers}",
+          "default": false,
+          "depends": "tt_enable"
+        },
+        {
+          "key": "tt_likes",
+          "type": "bool",
+          "label": "Likes (profile total)  –  {tiktok_likes}",
+          "default": false,
+          "depends": "tt_enable"
+        },
+        {
+          "key": "tt_viewers",
+          "type": "bool",
+          "label": "Live viewers  –  {tiktok_viewers}",
+          "default": false,
+          "depends": "tt_enable",
+          "hint": "Only while you are live on TikTok; checked every 30 seconds."
+        },
+        {
+          "key": "tt_viewer_icon",
+          "type": "emoji",
+          "label": "Viewer icon",
+          "default": "👁️",
+          "depends": "tt_viewers"
         }
       ]
     },

@@ -26,6 +26,7 @@ thread only.
 
 import json
 import os
+import select
 import socket
 import struct
 import time
@@ -56,7 +57,8 @@ MAX_FRAME = 1 << 20
 
 
 def empty_state():
-    return {"connected": False, "guild": None, "channel": None, "error": ""}
+    return {"connected": False, "guild": None, "channel": None, "error": "",
+            "count": None, "speaking": [], "mute": None, "deaf": None}
 
 
 # ------------------------------------------------------------ socket
@@ -128,6 +130,18 @@ class _Pipe:
             self._file.write(data)
             self._file.flush()
 
+    def ready(self, wait=0.0):
+        """True when a frame is waiting. Unix socket only: a Windows
+        named pipe has no select(), there the speaker list simply
+        follows the regular poll."""
+        if self._sock is None:
+            return False
+        try:
+            readable, _, _ = select.select([self._sock], [], [], wait)
+        except (OSError, ValueError):
+            return False
+        return bool(readable)
+
     def read(self, size):
         chunks = bytearray()
         while len(chunks) < size:
@@ -167,6 +181,12 @@ class DiscordRPC:
         self._fails = 0
         self._last = empty_state()
         self._last_error = ""
+        # voice channel details (v1.2.0)
+        self.want_voice = False       # count / mute / speaking asked for
+        self.want_speaking = False
+        self._sub_channel = None      # channel the SPEAKING_* subs are on
+        self._speaking = set()        # user ids speaking right now
+        self._names = {}              # user id -> nick in that channel
 
     # ------------------------------------------------------------ public
     def set_store(self, path):
@@ -207,6 +227,8 @@ class DiscordRPC:
                 guild_id = channel.get("guild_id")
                 if guild_id:
                     state["guild"] = self._guild_name(str(guild_id))
+            if self.want_voice:
+                self._voice(channel or {}, state)
             self._last = state
             self._fails = 0
             self._last_error = ""
@@ -222,6 +244,88 @@ class DiscordRPC:
                 self.log(f"discord: {e}")
         return dict(self._last)
 
+    # ------------------------------------------------- voice (v1.2.0)
+    def _voice(self, channel, state):
+        """{discord_count} {discord_mute_state} {discord_speaking}."""
+        members = channel.get("voice_states") or []
+        self._names = {}
+        for m in members:
+            user = m.get("user") or {}
+            uid = str(user.get("id") or "")
+            if uid:
+                self._names[uid] = (m.get("nick") or user.get("global_name")
+                                    or user.get("username") or "?")
+        if channel:
+            state["count"] = len(members)
+        try:
+            settings = self._command("GET_VOICE_SETTINGS", {}) or {}
+            state["mute"] = bool(settings.get("mute"))
+            state["deaf"] = bool(settings.get("deaf"))
+        except Exception:
+            pass
+        cid = str(channel.get("id") or "") or None
+        if self.want_speaking and cid != self._sub_channel:
+            self._subscribe_speaking(cid)
+        state["speaking"] = self.speaking()
+
+    def _subscribe_speaking(self, cid):
+        """Moves the SPEAKING_START/STOP subscription to channel `cid`."""
+        old, self._sub_channel = self._sub_channel, cid
+        self._speaking = set()
+        for evt in ("SPEAKING_START", "SPEAKING_STOP"):
+            if old:
+                try:
+                    self._command("UNSUBSCRIBE", {"channel_id": old},
+                                  evt=evt)
+                except Exception:
+                    pass
+            if cid:
+                self._command("SUBSCRIBE", {"channel_id": cid}, evt=evt)
+
+    def speaking(self):
+        """Names of the people talking right now, in channel order."""
+        return [self._names.get(uid, "?") for uid in self._names
+                if uid in self._speaking] + \
+               ["?" for uid in self._speaking if uid not in self._names]
+
+    def pump(self, wait=0.0):
+        """Reads the events that arrived since the last command - so the
+        speaker list follows within a tick instead of a poll. True when
+        something changed."""
+        if self._pipe is None or not self._authed:
+            return False
+        changed = False
+        try:
+            while self._pipe.ready(wait):
+                wait = 0.0
+                self._pipe.settimeout(COMMAND_TIMEOUT)
+                opcode, payload = self._recv()
+                if opcode == OP_PING:
+                    self._send(OP_PONG, payload)
+                    continue
+                if opcode == OP_CLOSE:
+                    raise RuntimeError("connection closed")
+                changed = self._event(payload) or changed
+        except Exception as e:
+            self._drop()
+            self.log(f"discord: {e}")
+        return changed
+
+    def _event(self, payload):
+        if payload.get("cmd") != "DISPATCH":
+            return False
+        evt = payload.get("evt")
+        uid = str((payload.get("data") or {}).get("user_id") or "")
+        if not uid:
+            return False
+        if evt == "SPEAKING_START" and uid not in self._speaking:
+            self._speaking.add(uid)
+            return True
+        if evt == "SPEAKING_STOP" and uid in self._speaking:
+            self._speaking.discard(uid)
+            return True
+        return False
+
     # ----------------------------------------------------------- connect
     def _drop(self):
         if self._pipe is not None:
@@ -231,6 +335,8 @@ class DiscordRPC:
                 pass
         self._pipe = None
         self._authed = False
+        self._sub_channel = None
+        self._speaking = set()
 
     def _ensure(self, conf):
         client_id = str(conf["client_id"]).strip()
@@ -474,17 +580,21 @@ class DiscordRPC:
         except Exception:
             return opcode, {}
 
-    def _command(self, cmd, args, timeout=COMMAND_TIMEOUT):
+    def _command(self, cmd, args, timeout=COMMAND_TIMEOUT, evt=None):
         """Send one command and wait for the answer with our nonce.
 
-        Events (VOICE_CHANNEL_SELECT and friends) can arrive in between;
-        they carry no nonce and are simply skipped.
+        Events (VOICE_CHANNEL_SELECT, SPEAKING_START and friends) can
+        arrive in between; they carry no nonce and go to _event().
+        `evt` is the event name SUBSCRIBE / UNSUBSCRIBE need.
         """
         if self._pipe is None:
             raise RuntimeError("not connected")
         nonce = uuid.uuid4().hex
         self._pipe.settimeout(timeout)
-        self._send(OP_FRAME, {"cmd": cmd, "args": args, "nonce": nonce})
+        frame = {"cmd": cmd, "args": args, "nonce": nonce}
+        if evt:
+            frame["evt"] = evt
+        self._send(OP_FRAME, frame)
         deadline = time.time() + timeout
         while time.time() < deadline:
             opcode, payload = self._recv()
@@ -494,6 +604,7 @@ class DiscordRPC:
                 self._send(OP_PONG, payload)
                 continue
             if payload.get("nonce") != nonce:
+                self._event(payload)
                 continue
             if payload.get("evt") == "ERROR":
                 data = payload.get("data") or {}

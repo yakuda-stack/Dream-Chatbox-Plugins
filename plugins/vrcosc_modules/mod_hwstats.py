@@ -1,4 +1,9 @@
-"""Linux Hardware Stats - CPU, GPU, RAM, VRAM, network, FPS, VR mode.
+"""System - RAM/VRAM in GB, network, active window, VR mode.
+
+v2.0.0: CPU, GPU, temperatures, power draw and FPS were removed here -
+the app's own Hardware card and World Stats show them already, and two
+places for the same number only made the settings confusing. What stays
+is what the app does not have.
 
 Port of `LinuxHardwareStats` from Bluscream's VRCOSC-Modules. The reading
 is done by his `vrcosc_hwstats.sh`, bundled here unchanged: it walks
@@ -14,16 +19,13 @@ lines. We deploy a patched copy (indices + output path) and parse it.
 from . import util
 
 ID = "hw"
-NAME = "Linux Hardware Stats"
+NAME = "System"
 SCRIPT = "vrcosc_hwstats.sh"
 
 KEYS = (
-    "hw_cpu", "hw_cpu_usage", "hw_cpu_temp", "hw_cpu_power", "hw_cpu_name",
-    "hw_gpu", "hw_gpu_usage", "hw_gpu_temp", "hw_gpu_power", "hw_gpu_name",
     "hw_ram", "hw_ram_usage", "hw_ram_used", "hw_ram_total",
     "hw_vram", "hw_vram_usage", "hw_vram_used", "hw_vram_total",
     "hw_net", "hw_net_rx", "hw_net_tx",
-    "hw_temp_max", "hw_temp_sys", "hw_fps",
     "hw_vr_mode", "hw_window", "hw_process", "hw_vrchat",
     # v1.2.0, names as in the chatbox converter
     "net_max_down", "net_max_up", "net_total_down", "net_total_up",
@@ -86,7 +88,9 @@ def on_settings(ctx):
 def _apply(ctx):
     """Re-deploy the script whenever an index or the interface changed."""
     global _script, _config
-    wanted = (ctx.num("hw_gpu_index", 0, 0, 7), ctx.num("hw_cpu_index", 0, 0, 7),
+    # the CPU index only picked the CPU temperature, which is gone - the
+    # script still wants a value
+    wanted = (ctx.num("hw_gpu_index", 0, 0, 7), 0,
               ctx.text("hw_iface"), ctx.text("hw_script"))
     if wanted == _config and _script is not None:
         return
@@ -143,15 +147,6 @@ def values(ctx):
     if not snap:
         return vals
 
-    fahrenheit = ctx.get("hw_temp_unit", "celsius") == "fahrenheit"
-    power = ctx.flag("hw_power")
-
-    def temp(value):
-        if not value:
-            return None
-        return (f"{round(value * 9 / 5 + 32)}°F" if fahrenheit
-                else f"{round(value)}°C")
-
     def pct(value):
         return f"{round(value)}%" if value is not None else None
 
@@ -169,34 +164,6 @@ def values(ctx):
         else:
             body = f"{used}/{total} GB"
         return util.join(icon, body)
-
-    # ------------------------------------------------------------- CPU
-    if ctx.flag("hw_show_cpu", True):
-        vals["hw_cpu_usage"] = pct(snap.get("cpu_usage"))
-        vals["hw_cpu_temp"] = temp(snap.get("cpu_temp"))
-        watt = snap.get("cpu_power") or 0
-        vals["hw_cpu_power"] = f"{watt}W" if watt else None
-        vals["hw_cpu_name"] = _name(snap.get("cpu_name"), "Generic CPU")
-        vals["hw_cpu"] = util.join(ctx.text("hw_icon_cpu"),
-                                   vals["hw_cpu_usage"], vals["hw_cpu_temp"],
-                                   vals["hw_cpu_power"] if power else None)
-
-    # ------------------------------------------------------------- GPU
-    # A card that reports nothing at all (no driver, VM, headless) would
-    # otherwise sit in the line as a permanent "0%".
-    if ctx.flag("hw_show_gpu", True):
-        vals["hw_gpu_usage"] = pct(snap.get("gpu_usage"))
-        vals["hw_gpu_temp"] = temp(snap.get("gpu_temp"))
-        watt = snap.get("gpu_power") or 0
-        vals["hw_gpu_power"] = f"{watt}W" if watt else None
-        vals["hw_gpu_name"] = _name(snap.get("gpu_name"), "Unknown GPU")
-        if (snap.get("gpu_usage") or snap.get("gpu_temp") or watt
-                or vals["hw_gpu_name"]):
-            vals["hw_gpu"] = util.join(
-                ctx.text("hw_icon_gpu"), vals["hw_gpu_usage"],
-                vals["hw_gpu_temp"], vals["hw_gpu_power"] if power else None)
-        else:
-            vals["hw_gpu_usage"] = vals["hw_gpu_temp"] = None
 
     # ------------------------------------------------------- RAM / VRAM
     if ctx.flag("hw_show_ram", True):
@@ -224,13 +191,6 @@ def values(ctx):
                                    "⬆", vals["hw_net_tx"])
         _net_extras(ctx, snap, vals)
 
-    vals["hw_temp_max"] = temp(snap.get("max_temp"))
-    vals["hw_temp_sys"] = temp(snap.get("system_temp"))
-
-    if ctx.flag("hw_show_fps"):
-        fps = snap.get("fps") or 0
-        vals["hw_fps"] = f"{fps} FPS" if fps > 0 else None
-
     if ctx.flag("hw_show_vr"):
         mode = (snap.get("vr_mode") or "").strip()
         if mode:
@@ -250,13 +210,6 @@ def values(ctx):
     if ctx.flag("hw_show_vrc") and snap.get("vrchat_running"):
         vals["hw_vrchat"] = ctx.text("hw_vrc_text", "VRChat") or None
     return vals
-
-
-def _name(value, placeholder):
-    """The script falls back to 'Unknown GPU' / 'Generic CPU' when it
-    finds nothing - not worth a slot in the chatbox."""
-    value = (value or "").strip()
-    return value if value and value != placeholder else None
 
 
 def _net_extras(ctx, snap, vals):
@@ -325,5 +278,5 @@ def _speed(kibps):
 
 def line(vals):
     """This module's contribution to the combined {vrcosc_modules} line."""
-    return [vals["hw_cpu"], vals["hw_gpu"], vals["hw_ram"], vals["hw_vram"],
-            vals["hw_net"], vals["hw_fps"], vals["hw_vr_mode"]]
+    return [vals["hw_ram"], vals["hw_vram"], vals["hw_net"],
+            vals["hw_vr_mode"]]

@@ -1,4 +1,9 @@
-"""Linux Media - the track from any MPRIS player.
+"""Player status - play/pause icon and volume from any MPRIS player.
+
+v2.0.0: title, artist, position, length and the progress bar were
+removed here - the app's MediaPlay card shows them already (with
+lyrics, songbar and player choice). Left are the two values MediaPlay
+does not have: {md_status} and {md_volume}.
 
 Port of `LinuxMedia` from Bluscream's VRCOSC-Modules. His
 `vrcosc_mpris_query.sh` is bundled unchanged and asks D-Bus for the first
@@ -22,11 +27,10 @@ run a player the built-in card does not pick up.
 from . import util
 
 ID = "md"
-NAME = "Linux Media"
+NAME = "Player status"
 SCRIPT = "vrcosc_mpris_query.sh"
 
-KEYS = ("md_media", "md_title", "md_artist", "md_player", "md_status",
-        "md_position", "md_duration", "md_progress", "md_volume")
+KEYS = ("md_status", "md_volume")
 
 _poller = None
 _script = None
@@ -104,25 +108,10 @@ def values(ctx):
 
     icon = _ICONS.get(status, "") if ctx.flag("md_icons", True) else ""
     vals["md_status"] = util.join(icon, status if not icon else "") or icon
-    vals["md_title"] = util.cut(snap["title"],
-                                ctx.num("md_title_max", 32, 6, 120)) or None
-    vals["md_artist"] = util.cut(snap["artist"],
-                                 ctx.num("md_artist_max", 24, 4, 80)) or None
-    vals["md_player"] = snap["player"] or None
-    if snap["length"] > 0:
-        vals["md_duration"] = util.mmss(snap["length"])
-        vals["md_position"] = util.mmss(snap["position"])
-        if ctx.flag("md_bar"):
-            vals["md_progress"] = util.bar(snap["position"] / snap["length"],
-                                           ctx.num("md_bar_width", 10, 4, 20))
     if snap["volume"]:
         vals["md_volume"] = f"{round(snap['volume'] * 100)}%"
-
-    vals["md_media"] = util.join(icon, vals["md_title"],
-                                 f"– {vals['md_artist']}"
-                                 if vals["md_artist"] else None)
     return vals
 
 
 def line(vals):
-    return [vals["md_media"]]
+    return [util.join(vals["md_status"], vals["md_volume"])]

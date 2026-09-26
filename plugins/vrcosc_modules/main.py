@@ -1,21 +1,23 @@
-"""VRCOSC Modules (Linux) - Bluscream's module set for OSC-DreamChatbox.
+"""Linux Extras (from VRCOSC) - Bluscream's module set for OSC-DreamChatbox.
 
 One plugin, one collapsible block per module, each with its own `enable`
 switch. Nothing is started until its block is switched on: a disabled
 module has no thread, no socket and no subprocess, and its placeholders
 stay empty so they drop out of the line together with their separators.
 
-    Linux Hardware Stats   CPU, GPU, RAM, VRAM, network, FPS, VR mode
-    Linux Media            the track from any MPRIS player
-    Linux Process Manager  which of your programs are running
-    OpenXR                 runtime, session and VR uptime
-    Home Assistant         entity states over the REST API
-    HTTP                   any URL or JSON API as text
-    HTTP / MCP Server      REST + MCP endpoint into the chatbox
-    IRC Bridge             the newest message from a channel
-    VRCX Bridge            world, friends and friend events
-    VRChat Settings        values out of VRChat's config.json
-    Notifications          push changes to desktop / XSOverlay / webhook
+Since v2.0.0 only what the app and the other plugins do not already do:
+
+    System            RAM/VRAM in GB, network, active window, VR mode
+    Player status     play/pause icon and volume (MPRIS)
+    Programs          which of your programs are running
+    OpenXR            runtime, session and VR uptime
+    VRCX              friends online and friend events
+    VRChat settings   values out of VRChat's config.json
+    Home Assistant    entity states over the REST API
+    HTTP              any URL or JSON API as text
+    IRC               the newest message from a channel
+    Server            REST + MCP endpoint into the chatbox
+    Notifications     push changes to desktop / XSOverlay / webhook
 
 Upstream: https://github.com/Bluscream/VRCOSC-Modules (GPL-3.0)
 See THIRD_PARTY_NOTICES.md for what was taken and what was rewritten.
@@ -32,8 +34,8 @@ import platform
 # the order of the parts in the combined line.
 MODULE_NAMES = (
     "mod_hwstats", "mod_media", "mod_process", "mod_openxr",
-    "mod_homeassistant", "mod_http", "mod_server", "mod_irc",
-    "mod_vrcx", "mod_vrchat", "mod_notify",
+    "mod_vrcx", "mod_vrchat", "mod_homeassistant", "mod_http",
+    "mod_irc", "mod_server", "mod_notify",
 )
 
 _api = None
@@ -165,7 +167,7 @@ def get_values():
 
     A block that is off contributes its keys as None, which apply_template
     drops together with its surrounding separators - so a template like
-    "{hw_cpu} | {md_media}" never leaves a stray '|' behind when the media
+    "{hw_ram} | {md_status}" never leaves a stray '|' behind when the media
     block is disabled.
     """
     vals = {}

@@ -39,7 +39,6 @@ WATCH = {
     "nt_on_http": "ht_text",
     "nt_on_ha": "ha_all",
     "nt_on_vrcx": "vx_last_friend",
-    "nt_on_media": "md_media",
 }
 
 _worker = None

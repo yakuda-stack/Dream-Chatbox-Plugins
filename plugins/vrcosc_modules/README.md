@@ -1,8 +1,12 @@
-# VRCOSC Modules (Linux) — plugin for OSC-DreamChatbox
+# Linux Extras (from VRCOSC) — plugin for OSC-DreamChatbox
 
 Bluscream's [VRCOSC-Modules](https://github.com/Bluscream/VRCOSC-Modules)
-ported to Linux and to the OSC-DreamChatbox plugin system. Eleven blocks
-in one plugin, each collapsible and each with its own **Enable** switch.
+ported to Linux and to the OSC-DreamChatbox plugin system. Plugin id:
+`vrcosc_modules`.
+
+**Since v2.0.0 it only does what the app and the other plugins don't.**
+CPU, GPU, temperatures and the song title are in the app itself, FPS and
+battery in World Stats – so those were taken out here.
 
 **A block that is off costs nothing.** No thread, no socket, no
 subprocess, no request — and its placeholders stay empty, so they drop out
@@ -14,17 +18,17 @@ of the line together with their separators.
 
 | Block | What it gives you | Needs |
 |---|---|---|
-| **Linux Hardware Stats** | CPU/GPU load, Watt, temps, RAM, VRAM, network, MangoHud FPS, active window, VR mode, VRChat running | `bash`; `nvidia-smi` on NVIDIA; optional MangoHud, xdotool/kdotool |
-| **Linux Media** | title, artist, player, position, progress bar from any MPRIS player | `dbus-send` |
-| **Linux Process Manager** | which of your watched programs are running | — |
-| **OpenXR** | runtime, VR session, VR uptime | — |
-| **Home Assistant** | three entity states | URL + long-lived token |
-| **HTTP** | any URL or JSON API as text | — |
-| **HTTP / MCP Server** | REST + MCP endpoint into the chatbox | — |
-| **IRC Bridge** | newest message from a channel | — |
-| **VRCX Bridge** | world, friends online, friend events | VRCX installed |
-| **VRChat Settings** | two values out of VRChat's `config.json` | — |
-| **Notifications** | pushes changes to desktop, XSOverlay or a webhook | `notify-send` for the desktop target |
+| 🖥️ **System** | RAM and VRAM in GB, network speed / totals / peaks / utilisation, active window, VR mode, VRChat running | `bash`; `nvidia-smi` on NVIDIA; optional xdotool/kdotool |
+| 🎵 **Player status** | ▶/⏸ icon and volume from any MPRIS player | `dbus-send` |
+| 📋 **Programs** | which of your watched programs are running | — |
+| 🥽 **OpenXR** | runtime, VR session, VR uptime | — |
+| 👥 **VRCX** | world, friends online, friend events | VRCX installed |
+| ⚙️ **VRChat settings** | two values out of VRChat's `config.json` | — |
+| 🏠 **Home Assistant** | three entity states | URL + long-lived token |
+| 🌐 **HTTP** | any URL or JSON API as text | — |
+| 💬 **IRC** | newest message from a channel | — |
+| 🔌 **Server** | REST + MCP endpoint into the chatbox | — |
+| 🔔 **Notifications** | pushes changes to desktop, XSOverlay or a webhook | `notify-send` for the desktop target |
 
 Everything is stdlib Python plus two shell scripts. The plugin installs
 nothing and pulls in no packages.
@@ -62,17 +66,18 @@ machine keeps its own `~/.vrcosc_hwstats.txt` and `~/.vrcosc_mpris.txt`.
 
 ## Placeholders
 
-77 of them, one prefix per block: `hw_` hardware, `md_` media, `pm_`
-processes, `xr_` OpenXR, `ha_` Home Assistant, `ht_` HTTP, `sv_` server,
-`irc_` IRC, `vx_` VRCX, `vc_` VRChat config, `nt_` notifications. They are
-registered globally — use them in status texts, in the Apps custom strings
-and in All-in-one.
+62 of them, one prefix per block: `hw_` system, `md_` player status, `pm_`
+programs, `xr_` OpenXR, `vx_` VRCX, `vc_` VRChat settings, `ha_` Home
+Assistant, `ht_` HTTP, `irc_` IRC, `sv_` server, `nt_` notifications –
+plus the network extras `net_max_down` `net_max_up` `net_total_down`
+`net_total_up` `net_utilization` (names from the chatbox converter). All
+are registered globally — use them in status texts, in the Apps custom
+strings and in All-in-one.
 
-Every block also has one combined value meant for a line:
-`{hw_cpu}` `{hw_gpu}` `{hw_ram}` `{md_media}` `{pm_list}` `{xr_vr}`
-`{ha_all}` `{ht_text}` `{sv_text}` `{irc_msg}` `{vx_friends}` `{vc_all}`.
-`{vrcosc_modules}` joins whatever is enabled, in block order, with the
-separator from the General block.
+Handy combined values: `{hw_ram}` `{hw_vram}` `{hw_net}` `{md_status}`
+`{pm_list}` `{xr_vr}` `{vx_friends}` `{ha_all}` `{ht_text}` `{irc_msg}`
+`{vc_all}`. `{vrcosc_modules}` joins whatever is enabled, in block order,
+with the separator from the General block.
 
 ## The HTTP / MCP server
 
@@ -96,8 +101,8 @@ otherwise. Anything that can reach it can write into your chatbox.
 ## Notifications
 
 The Notifications block watches values the other blocks produce and fires
-when one *changes*: a new IRC message, a friend event from VRCX, a track
-change, a different HTTP answer, a Home Assistant state. The first value
+when one *changes*: a new IRC message, a friend event from VRCX, a
+different HTTP answer, a Home Assistant state. The first value
 after a start is a state, not an event, so switching a block on does not
 spam you. Sending happens on a worker thread with a bounded queue — a slow
 webhook drops a notification rather than stalling the chatbox.

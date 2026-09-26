@@ -1,28 +1,18 @@
 {
-  "name": "VRCOSC Modules (Linux)",
+  "name": "Linux Extras (from VRCOSC)",
   "id": "vrcosc_modules",
-  "version": "1.2.0",
+  "version": "2.0.0",
   "author": "Bluscream & yakuda",
-  "description": "Bluscream's VRCOSC module set, ported to Linux and to the OSC-DreamChatbox plugin system: hardware stats, MPRIS media, a process watcher, OpenXR runtime and session, Home Assistant, a generic HTTP poller, a REST/MCP server, an IRC bridge, VRCX, VRChat's config and notifications to desktop, XSOverlay or a webhook. Every block has its own enable switch and starts nothing while it is off. Based on github.com/Bluscream/VRCOSC-Modules (GPL-3.0); his vrcosc_hwstats.sh and vrcosc_mpris_query.sh ship unchanged.",
-  "summary": "Eleven Linux blocks: hardware, media, processes, OpenXR, Home Assistant, HTTP, MCP server, IRC, VRCX, VRChat config, notifications.",
+  "description": "Extras for Linux from Bluscream's VRCOSC module set - only what the app and the other plugins do not already do. System: RAM and VRAM in GB, network speed, totals and peaks, the active window and the VR mode. Player status: play/pause icon and volume. Programs: which of your programs are running. OpenXR: runtime, session and VR uptime. VRCX: friends online and friend events. VRChat settings: values from VRChat's config.json. Home Assistant, HTTP, IRC, a small server for other programs, and notifications. Every block is off until you switch it on and costs nothing while it is off. CPU, GPU, temperatures and the song title are in the app itself, FPS in World Stats. Based on github.com/Bluscream/VRCOSC-Modules (GPL-3.0).",
+  "summary": "Linux extras from Bluscream's VRCOSC modules: RAM/VRAM in GB, network, active window, player status, programs, OpenXR, VRCX, Home Assistant, HTTP, IRC and more.",
   "Github": "github.com/Bluscream/VRCOSC-Modules",
   "main": "main.py",
   "image": "logo.png",
   "enabled": true,
   "is_linux": true,
   "is_windows": false,
-  "template": "{hw_cpu} {hw_gpu} \\n {hw_ram} {xr_vr}",
+  "template": "{hw_ram} {hw_net} \\n {xr_vr} {vx_friends}",
   "placeholders": {
-    "hw_cpu": "CPU block - icon, load, temperature",
-    "hw_cpu_usage": "CPU load in percent",
-    "hw_cpu_temp": "CPU package temperature",
-    "hw_cpu_power": "CPU package power draw in Watt",
-    "hw_cpu_name": "CPU model name",
-    "hw_gpu": "GPU block - icon, load, temperature",
-    "hw_gpu_usage": "GPU load in percent",
-    "hw_gpu_temp": "GPU temperature, junction where available",
-    "hw_gpu_power": "GPU power draw in Watt",
-    "hw_gpu_name": "GPU model name",
     "hw_ram": "RAM block - icon plus used/total",
     "hw_ram_usage": "RAM load in percent",
     "hw_ram_used": "RAM in use, in GB",
@@ -34,21 +24,16 @@
     "hw_net": "network block - down and up",
     "hw_net_rx": "download speed",
     "hw_net_tx": "upload speed",
-    "hw_temp_max": "hottest sensor in the machine",
-    "hw_temp_sys": "mainboard / ACPI temperature",
-    "hw_fps": "FPS of the active window",
     "hw_vr_mode": "Desktop / SteamVR / OpenXR",
     "hw_window": "title of the active window",
     "hw_process": "process behind the active window",
     "hw_vrchat": "shown only while VRChat is running",
-    "md_media": "media block - icon, title, artist",
-    "md_title": "track title",
-    "md_artist": "artist",
-    "md_player": "player the track comes from",
+    "net_max_down": "fastest download this session",
+    "net_max_up": "fastest upload this session",
+    "net_total_down": "downloaded (since app start or boot)",
+    "net_total_up": "uploaded (since app start or boot)",
+    "net_utilization": "how much of the link speed is in use",
     "md_status": "Playing / Paused / Stopped",
-    "md_position": "position in the track",
-    "md_duration": "length of the track",
-    "md_progress": "progress bar",
     "md_volume": "player volume",
     "pm_list": "watched programs that are running",
     "pm_missing": "watched programs that are not",
@@ -60,6 +45,15 @@
     "xr_mode": "SteamVR / Monado / WiVRn / Desktop",
     "xr_session": "text while a headset session runs",
     "xr_uptime": "how long you have been in VR",
+    "vx_world": "world VRCX last logged",
+    "vx_friends": "friends currently online",
+    "vx_last_friend": "who triggered the last friend event",
+    "vx_last_event": "Online / Offline",
+    "vx_status": "icon while the database is readable",
+    "vc_1": "VRChat config value 1",
+    "vc_2": "VRChat config value 2",
+    "vc_all": "both values in one string",
+    "vc_status": "icon while config.json was found",
     "ha_1": "Home Assistant entity 1",
     "ha_2": "Home Assistant entity 2",
     "ha_3": "Home Assistant entity 3",
@@ -70,43 +64,19 @@
     "ht_status": "HTTP status code",
     "ht_count": "requests sent since the start",
     "ht_ok": "icon for success or failure",
-    "sv_text": "text somebody pushed into the server",
-    "sv_requests": "requests the server answered",
-    "sv_status": "icon plus port",
-    "sv_port": "port the server listens on",
     "irc_msg": "newest message in the channel",
     "irc_author": "who wrote it",
     "irc_channel": "the channel",
     "irc_count": "messages seen since the start",
     "irc_online": "icon while connected",
-    "vx_world": "world VRCX last logged",
-    "vx_friends": "friends currently online",
-    "vx_last_friend": "who triggered the last friend event",
-    "vx_last_event": "Online / Offline",
-    "vx_status": "icon while the database is readable",
-    "vc_1": "VRChat config value 1",
-    "vc_2": "VRChat config value 2",
-    "vc_all": "both values in one string",
-    "vc_status": "icon while config.json was found",
+    "sv_text": "text somebody pushed into the server",
+    "sv_requests": "requests the server answered",
+    "sv_status": "icon plus port",
+    "sv_port": "port the server listens on",
     "nt_last": "text of the last notification",
-    "nt_count": "notifications sent",
-    "net_max_down": "fastest download this session",
-    "net_max_up": "fastest upload this session",
-    "net_total_down": "downloaded (since app start or boot)",
-    "net_total_up": "uploaded (since app start or boot)",
-    "net_utilization": "how much of the link speed is in use"
+    "nt_count": "notifications sent"
   },
   "global_placeholders": [
-    "hw_cpu",
-    "hw_cpu_usage",
-    "hw_cpu_temp",
-    "hw_cpu_power",
-    "hw_cpu_name",
-    "hw_gpu",
-    "hw_gpu_usage",
-    "hw_gpu_temp",
-    "hw_gpu_power",
-    "hw_gpu_name",
     "hw_ram",
     "hw_ram_usage",
     "hw_ram_used",
@@ -118,21 +88,16 @@
     "hw_net",
     "hw_net_rx",
     "hw_net_tx",
-    "hw_temp_max",
-    "hw_temp_sys",
-    "hw_fps",
     "hw_vr_mode",
     "hw_window",
     "hw_process",
     "hw_vrchat",
-    "md_media",
-    "md_title",
-    "md_artist",
-    "md_player",
+    "net_max_down",
+    "net_max_up",
+    "net_total_down",
+    "net_total_up",
+    "net_utilization",
     "md_status",
-    "md_position",
-    "md_duration",
-    "md_progress",
     "md_volume",
     "pm_list",
     "pm_missing",
@@ -144,6 +109,15 @@
     "xr_mode",
     "xr_session",
     "xr_uptime",
+    "vx_world",
+    "vx_friends",
+    "vx_last_friend",
+    "vx_last_event",
+    "vx_status",
+    "vc_1",
+    "vc_2",
+    "vc_all",
+    "vc_status",
     "ha_1",
     "ha_2",
     "ha_3",
@@ -154,40 +128,26 @@
     "ht_status",
     "ht_count",
     "ht_ok",
-    "sv_text",
-    "sv_requests",
-    "sv_status",
-    "sv_port",
     "irc_msg",
     "irc_author",
     "irc_channel",
     "irc_count",
     "irc_online",
-    "vx_world",
-    "vx_friends",
-    "vx_last_friend",
-    "vx_last_event",
-    "vx_status",
-    "vc_1",
-    "vc_2",
-    "vc_all",
-    "vc_status",
+    "sv_text",
+    "sv_requests",
+    "sv_status",
+    "sv_port",
     "nt_last",
-    "nt_count",
-    "net_max_down",
-    "net_max_up",
-    "net_total_down",
-    "net_total_up",
-    "net_utilization"
+    "nt_count"
   ],
   "user_reorderable": true,
   "settings": [
     {
       "key": "g_hw",
       "type": "group",
-      "label": "Linux Hardware Stats",
-      "expanded": true,
-      "hint": "CPU, GPU, RAM, VRAM, network, FPS and VR mode - read by Bluscream's vrcosc_hwstats.sh",
+      "label": "🖥️ System  –  RAM/VRAM in GB, network, active window, VR mode",
+      "expanded": false,
+      "hint": "What the app's own Hardware card does not show. CPU, GPU and temperatures: use the app's Hardware card; FPS: World Stats.",
       "items": [
         {
           "key": "hw_enable",
@@ -195,20 +155,6 @@
           "label": "Enable",
           "default": true,
           "hint": "Nothing runs while this is off - no thread, no request, no script"
-        },
-        {
-          "key": "hw_show_cpu",
-          "type": "bool",
-          "label": "CPU  –  {hw_cpu}",
-          "default": true,
-          "depends": "hw_enable"
-        },
-        {
-          "key": "hw_show_gpu",
-          "type": "bool",
-          "label": "GPU  –  {hw_gpu}",
-          "default": true,
-          "depends": "hw_enable"
         },
         {
           "key": "hw_show_ram",
@@ -250,14 +196,6 @@
           ]
         },
         {
-          "key": "hw_show_fps",
-          "type": "bool",
-          "label": "FPS  –  {hw_fps}",
-          "default": false,
-          "depends": "hw_enable",
-          "hint": "Needs MangoHud with autostart_log=1, otherwise the refresh rate of the monitor is shown"
-        },
-        {
           "key": "hw_show_vr",
           "type": "bool",
           "label": "VR mode  –  {hw_vr_mode}",
@@ -278,23 +216,6 @@
           "type": "bool",
           "label": "VRChat running  –  {hw_vrchat}",
           "default": false,
-          "depends": "hw_enable"
-        },
-        {
-          "key": "hw_temp_unit",
-          "type": "choice",
-          "label": "Temperature unit",
-          "default": "celsius",
-          "choices": [
-            {
-              "value": "celsius",
-              "label": "Celsius  –  61°C"
-            },
-            {
-              "value": "fahrenheit",
-              "label": "Fahrenheit  –  142°F"
-            }
-          ],
           "depends": "hw_enable"
         },
         {
@@ -319,28 +240,6 @@
           "depends": "hw_enable"
         },
         {
-          "key": "hw_power",
-          "type": "bool",
-          "label": "Power draw in the CPU/GPU block",
-          "default": false,
-          "depends": "hw_enable",
-          "hint": "Adds the Watts to {hw_cpu} and {hw_gpu} - on its own it stays in {hw_cpu_power} / {hw_gpu_power}"
-        },
-        {
-          "key": "hw_icon_cpu",
-          "type": "text",
-          "label": "CPU icon",
-          "default": "🧠",
-          "depends": "hw_show_cpu"
-        },
-        {
-          "key": "hw_icon_gpu",
-          "type": "text",
-          "label": "GPU icon",
-          "default": "🎮",
-          "depends": "hw_show_gpu"
-        },
-        {
           "key": "hw_icon_ram",
           "type": "text",
           "label": "RAM icon",
@@ -353,6 +252,16 @@
           "label": "VRAM icon",
           "default": "📊",
           "depends": "hw_show_vram"
+        },
+        {
+          "key": "hw_gpu_index",
+          "type": "int",
+          "label": "Graphics card for VRAM",
+          "default": 0,
+          "min": 0,
+          "max": 7,
+          "depends": "hw_show_vram",
+          "hint": "0-based - the amdgpu hwmon order, or the nvidia-smi index"
         },
         {
           "key": "hw_icon_vr",
@@ -378,26 +287,6 @@
           "max": 64,
           "depends": "hw_show_win",
           "suffix": " chars"
-        },
-        {
-          "key": "hw_gpu_index",
-          "type": "int",
-          "label": "GPU index",
-          "default": 0,
-          "min": 0,
-          "max": 7,
-          "depends": "hw_enable",
-          "hint": "0-based - the amdgpu hwmon order, or the nvidia-smi index"
-        },
-        {
-          "key": "hw_cpu_index",
-          "type": "int",
-          "label": "CPU index",
-          "default": 0,
-          "min": 0,
-          "max": 7,
-          "depends": "hw_enable",
-          "hint": "0-based, only relevant with several CPU packages"
         },
         {
           "key": "hw_iface",
@@ -431,8 +320,8 @@
     {
       "key": "g_md",
       "type": "group",
-      "label": "Linux Media",
-      "hint": "Track info from any MPRIS player over D-Bus - next to the chatbox's own media card",
+      "label": "🎵 Player status  –  ▶/⏸ and volume",
+      "hint": "The two values MediaPlay does not have. Title, artist, time and songbar: use the app's MediaPlay card.",
       "items": [
         {
           "key": "md_enable",
@@ -447,43 +336,6 @@
           "label": "Play / pause icon",
           "default": true,
           "depends": "md_enable"
-        },
-        {
-          "key": "md_bar",
-          "type": "bool",
-          "label": "Progress bar  –  {md_progress}",
-          "default": false,
-          "depends": "md_enable"
-        },
-        {
-          "key": "md_bar_width",
-          "type": "slider",
-          "label": "Bar width",
-          "default": 10,
-          "min": 4,
-          "max": 20,
-          "depends": "md_bar",
-          "suffix": " blocks"
-        },
-        {
-          "key": "md_title_max",
-          "type": "slider",
-          "label": "Title length",
-          "default": 32,
-          "min": 6,
-          "max": 120,
-          "depends": "md_enable",
-          "suffix": " chars"
-        },
-        {
-          "key": "md_artist_max",
-          "type": "slider",
-          "label": "Artist length",
-          "default": 24,
-          "min": 4,
-          "max": 80,
-          "depends": "md_enable",
-          "suffix": " chars"
         },
         {
           "key": "md_interval",
@@ -503,12 +355,13 @@
           "depends": "md_enable",
           "hint": "Advanced: path to your own copy, empty uses the bundled one"
         }
-      ]
+      ],
+      "expanded": false
     },
     {
       "key": "g_pm",
       "type": "group",
-      "label": "Linux Process Manager",
+      "label": "📋 Programs  –  which of your programs are running",
       "hint": "Watch programs and show which of them are running",
       "items": [
         {
@@ -557,12 +410,13 @@
           "depends": "pm_enable",
           "suffix": " s"
         }
-      ]
+      ],
+      "expanded": false
     },
     {
       "key": "g_xr",
       "type": "group",
-      "label": "OpenXR",
+      "label": "🥽 OpenXR  –  runtime, session, VR uptime",
       "hint": "Runtime, session and VR uptime. Gesture and haptic control are not portable - see the README.",
       "items": [
         {
@@ -634,12 +488,172 @@
           "depends": "xr_enable",
           "suffix": " s"
         }
-      ]
+      ],
+      "expanded": false
+    },
+    {
+      "key": "g_vx",
+      "type": "group",
+      "label": "👥 VRCX  –  friends online, friend events",
+      "hint": "Reads VRCX's SQLite database - no named pipe needed",
+      "items": [
+        {
+          "key": "vx_enable",
+          "type": "bool",
+          "label": "Enable",
+          "default": false,
+          "hint": "Nothing runs while this is off - no thread, no request, no script"
+        },
+        {
+          "key": "vx_show_friends",
+          "type": "bool",
+          "label": "Friends online  –  {vx_friends}",
+          "default": true,
+          "depends": "vx_enable"
+        },
+        {
+          "key": "vx_show_world",
+          "type": "bool",
+          "label": "Current world  –  {vx_world}",
+          "default": true,
+          "depends": "vx_enable"
+        },
+        {
+          "key": "vx_show_last",
+          "type": "bool",
+          "label": "Last friend event  –  {vx_last_friend}",
+          "default": false,
+          "depends": "vx_enable"
+        },
+        {
+          "key": "vx_friend_icon",
+          "type": "text",
+          "label": "Friends icon",
+          "default": "👥",
+          "depends": "vx_show_friends"
+        },
+        {
+          "key": "vx_icon",
+          "type": "text",
+          "label": "VRCX icon",
+          "default": "🅥",
+          "depends": "vx_enable"
+        },
+        {
+          "key": "vx_world_max",
+          "type": "slider",
+          "label": "World name length",
+          "default": 24,
+          "min": 6,
+          "max": 64,
+          "depends": "vx_show_world",
+          "suffix": " chars"
+        },
+        {
+          "key": "vx_db",
+          "type": "text",
+          "label": "Own VRCX.sqlite3",
+          "default": "",
+          "depends": "vx_enable",
+          "hint": "Empty searches ~/.config/VRCX and the Wine/Proton prefixes"
+        },
+        {
+          "key": "vx_interval",
+          "type": "slider",
+          "label": "Refresh interval",
+          "default": 15,
+          "min": 5,
+          "max": 600,
+          "depends": "vx_enable",
+          "suffix": " s"
+        }
+      ],
+      "expanded": false
+    },
+    {
+      "key": "g_vc",
+      "type": "group",
+      "label": "⚙️ VRChat settings  –  values from VRChat's config.json",
+      "hint": "Values out of VRChat's config.json - read only",
+      "items": [
+        {
+          "key": "vc_enable",
+          "type": "bool",
+          "label": "Enable",
+          "default": false,
+          "hint": "Nothing runs while this is off - no thread, no request, no script"
+        },
+        {
+          "key": "vc_k1",
+          "type": "text",
+          "label": "Key 1",
+          "default": "",
+          "depends": "vc_enable",
+          "hint": "Dotted, e.g. camera_res_height or cache_size"
+        },
+        {
+          "key": "vc_l1",
+          "type": "text",
+          "label": "Label 1",
+          "default": "",
+          "depends": "vc_enable"
+        },
+        {
+          "key": "vc_k2",
+          "type": "text",
+          "label": "Key 2",
+          "default": "",
+          "depends": "vc_enable"
+        },
+        {
+          "key": "vc_l2",
+          "type": "text",
+          "label": "Label 2",
+          "default": "",
+          "depends": "vc_enable"
+        },
+        {
+          "key": "vc_icon",
+          "type": "text",
+          "label": "Icon",
+          "default": "⚙",
+          "depends": "vc_enable"
+        },
+        {
+          "key": "vc_max",
+          "type": "slider",
+          "label": "Value length",
+          "default": 24,
+          "min": 4,
+          "max": 120,
+          "depends": "vc_enable",
+          "suffix": " chars"
+        },
+        {
+          "key": "vc_path",
+          "type": "text",
+          "label": "Own config.json",
+          "default": "",
+          "depends": "vc_enable",
+          "hint": "Empty searches the Steam/Proton prefix of VRChat"
+        },
+        {
+          "key": "vc_interval",
+          "type": "slider",
+          "label": "Refresh interval",
+          "default": 60,
+          "min": 10,
+          "max": 900,
+          "depends": "vc_enable",
+          "suffix": " s"
+        }
+      ],
+      "expanded": false
     },
     {
       "key": "g_ha",
       "type": "group",
-      "label": "Home Assistant",
+      "label": "🏠 Home Assistant  –  three entity states",
       "hint": "Three entity states over the REST API",
       "items": [
         {
@@ -750,12 +764,13 @@
           "depends": "ha_enable",
           "suffix": " s"
         }
-      ]
+      ],
+      "expanded": false
     },
     {
       "key": "g_ht",
       "type": "group",
-      "label": "HTTP",
+      "label": "🌐 HTTP  –  any URL or JSON API as text",
       "hint": "Any URL or JSON API as a placeholder",
       "items": [
         {
@@ -849,80 +864,13 @@
           "hint": "Be nice to other people's servers",
           "suffix": " s"
         }
-      ]
-    },
-    {
-      "key": "g_sv",
-      "type": "group",
-      "label": "HTTP / MCP Server",
-      "hint": "Lets other programs read the placeholders and write one line into the chatbox",
-      "items": [
-        {
-          "key": "sv_enable",
-          "type": "bool",
-          "label": "Enable",
-          "default": false,
-          "hint": "Nothing runs while this is off - no thread, no request, no script"
-        },
-        {
-          "key": "sv_port",
-          "type": "int",
-          "label": "Port",
-          "default": 8723,
-          "min": 1024,
-          "max": 65535,
-          "depends": "sv_enable"
-        },
-        {
-          "key": "sv_bind",
-          "type": "choice",
-          "label": "Reachable from",
-          "default": "local",
-          "choices": [
-            {
-              "value": "local",
-              "label": "This machine only (127.0.0.1)"
-            },
-            {
-              "value": "all",
-              "label": "The whole network (0.0.0.0)"
-            }
-          ],
-          "depends": "sv_enable",
-          "hint": "Network binding refuses to start without a token"
-        },
-        {
-          "key": "sv_token",
-          "type": "text",
-          "label": "Token",
-          "default": "",
-          "secret": true,
-          "depends": "sv_enable",
-          "hint": "Required as ?token=… or an Authorization header"
-        },
-        {
-          "key": "sv_icon",
-          "type": "text",
-          "label": "Status icon",
-          "default": "🌐",
-          "depends": "sv_enable"
-        },
-        {
-          "key": "sv_max",
-          "type": "slider",
-          "label": "Text length",
-          "default": 60,
-          "min": 4,
-          "max": 140,
-          "depends": "sv_enable",
-          "suffix": " chars"
-        }
-      ]
+      ],
+      "expanded": false
     },
     {
       "key": "g_irc",
       "type": "group",
-      "label": "IRC Bridge",
+      "label": "💬 IRC  –  newest message from a channel",
       "hint": "The newest message from one channel - read only",
       "items": [
         {
@@ -1022,169 +970,82 @@
           "depends": "irc_enable",
           "hint": "Seconds until the last message disappears again. 0 keeps it."
         }
-      ]
+      ],
+      "expanded": false
     },
     {
-      "key": "g_vx",
+      "key": "g_sv",
       "type": "group",
-      "label": "VRCX Bridge",
-      "hint": "Reads VRCX's SQLite database - no named pipe needed",
+      "label": "🔌 Server  –  lets other programs read and write the chatbox",
+      "hint": "Lets other programs read the placeholders and write one line into the chatbox",
       "items": [
         {
-          "key": "vx_enable",
+          "key": "sv_enable",
           "type": "bool",
           "label": "Enable",
           "default": false,
           "hint": "Nothing runs while this is off - no thread, no request, no script"
         },
         {
-          "key": "vx_show_friends",
-          "type": "bool",
-          "label": "Friends online  –  {vx_friends}",
-          "default": true,
-          "depends": "vx_enable"
+          "key": "sv_port",
+          "type": "int",
+          "label": "Port",
+          "default": 8723,
+          "min": 1024,
+          "max": 65535,
+          "depends": "sv_enable"
         },
         {
-          "key": "vx_show_world",
-          "type": "bool",
-          "label": "Current world  –  {vx_world}",
-          "default": true,
-          "depends": "vx_enable"
+          "key": "sv_bind",
+          "type": "choice",
+          "label": "Reachable from",
+          "default": "local",
+          "choices": [
+            {
+              "value": "local",
+              "label": "This machine only (127.0.0.1)"
+            },
+            {
+              "value": "all",
+              "label": "The whole network (0.0.0.0)"
+            }
+          ],
+          "depends": "sv_enable",
+          "hint": "Network binding refuses to start without a token"
         },
         {
-          "key": "vx_show_last",
-          "type": "bool",
-          "label": "Last friend event  –  {vx_last_friend}",
-          "default": false,
-          "depends": "vx_enable"
-        },
-        {
-          "key": "vx_friend_icon",
+          "key": "sv_token",
           "type": "text",
-          "label": "Friends icon",
-          "default": "👥",
-          "depends": "vx_show_friends"
+          "label": "Token",
+          "default": "",
+          "secret": true,
+          "depends": "sv_enable",
+          "hint": "Required as ?token=… or an Authorization header"
         },
         {
-          "key": "vx_icon",
+          "key": "sv_icon",
           "type": "text",
-          "label": "VRCX icon",
-          "default": "🅥",
-          "depends": "vx_enable"
+          "label": "Status icon",
+          "default": "🌐",
+          "depends": "sv_enable"
         },
         {
-          "key": "vx_world_max",
+          "key": "sv_max",
           "type": "slider",
-          "label": "World name length",
-          "default": 24,
-          "min": 6,
-          "max": 64,
-          "depends": "vx_show_world",
-          "suffix": " chars"
-        },
-        {
-          "key": "vx_db",
-          "type": "text",
-          "label": "Own VRCX.sqlite3",
-          "default": "",
-          "depends": "vx_enable",
-          "hint": "Empty searches ~/.config/VRCX and the Wine/Proton prefixes"
-        },
-        {
-          "key": "vx_interval",
-          "type": "slider",
-          "label": "Refresh interval",
-          "default": 15,
-          "min": 5,
-          "max": 600,
-          "depends": "vx_enable",
-          "suffix": " s"
-        }
-      ]
-    },
-    {
-      "key": "g_vc",
-      "type": "group",
-      "label": "VRChat Settings",
-      "hint": "Values out of VRChat's config.json - read only",
-      "items": [
-        {
-          "key": "vc_enable",
-          "type": "bool",
-          "label": "Enable",
-          "default": false,
-          "hint": "Nothing runs while this is off - no thread, no request, no script"
-        },
-        {
-          "key": "vc_k1",
-          "type": "text",
-          "label": "Key 1",
-          "default": "",
-          "depends": "vc_enable",
-          "hint": "Dotted, e.g. camera_res_height or cache_size"
-        },
-        {
-          "key": "vc_l1",
-          "type": "text",
-          "label": "Label 1",
-          "default": "",
-          "depends": "vc_enable"
-        },
-        {
-          "key": "vc_k2",
-          "type": "text",
-          "label": "Key 2",
-          "default": "",
-          "depends": "vc_enable"
-        },
-        {
-          "key": "vc_l2",
-          "type": "text",
-          "label": "Label 2",
-          "default": "",
-          "depends": "vc_enable"
-        },
-        {
-          "key": "vc_icon",
-          "type": "text",
-          "label": "Icon",
-          "default": "⚙",
-          "depends": "vc_enable"
-        },
-        {
-          "key": "vc_max",
-          "type": "slider",
-          "label": "Value length",
-          "default": 24,
-          "min": 4,
-          "max": 120,
-          "depends": "vc_enable",
-          "suffix": " chars"
-        },
-        {
-          "key": "vc_path",
-          "type": "text",
-          "label": "Own config.json",
-          "default": "",
-          "depends": "vc_enable",
-          "hint": "Empty searches the Steam/Proton prefix of VRChat"
-        },
-        {
-          "key": "vc_interval",
-          "type": "slider",
-          "label": "Refresh interval",
+          "label": "Text length",
           "default": 60,
-          "min": 10,
-          "max": 900,
-          "depends": "vc_enable",
-          "suffix": " s"
+          "min": 4,
+          "max": 140,
+          "depends": "sv_enable",
+          "suffix": " chars"
         }
-      ]
+      ],
+      "expanded": false
     },
     {
       "key": "g_nt",
       "type": "group",
-      "label": "Notifications",
+      "label": "🔔 Notifications  –  send changes to desktop, XSOverlay or a webhook",
       "hint": "Sends changes outwards instead of into the line",
       "items": [
         {
@@ -1242,13 +1103,6 @@
           "depends": "nt_enable"
         },
         {
-          "key": "nt_on_media",
-          "type": "bool",
-          "label": "On a track change",
-          "default": false,
-          "depends": "nt_enable"
-        },
-        {
           "key": "nt_on_ha",
           "type": "bool",
           "label": "On a Home Assistant change",
@@ -1279,7 +1133,8 @@
           "depends": "nt_enable",
           "suffix": " chars"
         }
-      ]
+      ],
+      "expanded": false
     },
     {
       "key": "g_all",
@@ -1294,7 +1149,9 @@
           "default": "|",
           "hint": "Between the blocks in the combined line. Empty joins them with a space."
         }
-      ]
+      ],
+      "expanded": false
     }
-  ]
+  ],
+  "short_description": "RAM/VRAM in GB, network, window, OpenXR, VRCX, Home Assistant, HTTP, IRC … (Linux)"
 }

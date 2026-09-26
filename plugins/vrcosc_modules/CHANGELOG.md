@@ -5,6 +5,30 @@ All notable changes to this plugin are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.0] - 2026-09-26
+
+Tidied up: only what the app and the other plugins do not already do,
+in a clearer order. Now also in the plugin store.
+
+### Changed
+- Shown as **Linux Extras (from VRCOSC)**; the plugin id stays
+  `vrcosc_modules`, so existing setups and the chatbox converter keep
+  working.
+- Blocks renamed and reordered by topic: System, Player status,
+  Programs, OpenXR, VRCX, VRChat settings, Home Assistant, HTTP, IRC,
+  Server, Notifications. Each label says in one line what it gives.
+
+### Removed
+- **System** (was Linux Hardware Stats): CPU and GPU load, temperatures,
+  power draw and FPS (`{hw_cpu*}` `{hw_gpu*}` `{hw_temp_max}`
+  `{hw_temp_sys}` `{hw_fps}`) – the app's Hardware card and World Stats
+  show them. RAM/VRAM in GB, network, window and VR mode stay.
+- **Player status** (was Linux Media): title, artist, player, position,
+  length and progress bar (`{md_media}` `{md_title}` `{md_artist}`
+  `{md_player}` `{md_position}` `{md_duration}` `{md_progress}`) – the
+  app's MediaPlay card shows them. `{md_status}` and `{md_volume}` stay.
+- Notifications: "On a track change" (it watched `{md_media}`).
+
 ## [1.2.0] - 2026-09-26
 
 ### Added

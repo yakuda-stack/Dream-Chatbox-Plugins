@@ -64,20 +64,19 @@ plugin never touches `~/.config/OSCLeash/Config.json`.
 ## OSCLeash is included
 
 There is nothing to install. `vendor/OSCLeash/` inside this plugin holds
-OSCLeash itself, plus `python-osc` and `tinyoscquery`, so the Start
-button runs a script that is already on disk – no AUR package, no
-AppImage, no `chmod`, no pip, and the same story on Windows and Linux.
-See `vendor/VENDOR.md` for versions, licences and the one modification.
+OSCLeash itself, plus `python-osc`, `tinyoscquery`, `zeroconf` and
+`ifaddr`, so the Start button runs a script that is already on disk – no
+AUR package, no AppImage, no `chmod`, no pip, OSCQuery included, and the
+same story on Windows and Linux. See `vendor/VENDOR.md` for versions,
+licences and the two small modifications.
 
-Two things still come from outside:
+One thing still comes from outside:
 
-* **A python interpreter.** When the chatbox runs from source or from
-  the AUR package, its own python is used. A frozen build (the Windows
-  .exe) is not a python, so the plugin looks for `python3` / `python` /
-  `py` on `PATH` instead and says so if there is none.
-* **`zeroconf`, but only for OSCQuery.** The chatbox depends on it
-  anyway, so it is normally there. If it is not, the plugin refuses that
-  leash with a readable reason instead of letting OSCLeash crash on it.
+* **A python interpreter, 3.10 or newer.** When the chatbox runs from
+  source or from the AUR package, its own python is used. A frozen build
+  (the Windows .exe) is not a python, so the plugin looks for `python3` /
+  `python` / `py` on `PATH` instead, skips anything older than 3.10 and
+  says so if nothing fits.
 
 The **OSCLeash override** setting stays empty for all of this. Fill it
 in only to run your own build – a checkout's `OSCLeash.py`, an AppImage,

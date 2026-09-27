@@ -18,7 +18,7 @@ Sorted by topic: each plugin covers one area, so you only install what you use.
 | **[Social Media](./plugins/social_media)** | `1.2.0` | **Discord, TikTok, Spotify, Instagram**: your handles, the Discord voice channel with people / who talks / mute, TikTok numbers *(experimental)* | `{sm_social}` `{sm_discord}` `{sm_channel}` `{discord_count}` `{discord_speaking}` `{discord_mute_state}` `{tiktok_followers}` `{tiktok_viewers}` |
 | **[Linux Extras (from VRCOSC)](./plugins/vrcosc_modules)** | `2.0.0` | Linux-only extras from Bluscream's VRCOSC modules – only what the app doesn't have: RAM/VRAM in GB, network, active window, player status, programs, OpenXR, VRCX, Home Assistant, HTTP, IRC … | `{hw_ram}` `{hw_net}` `{net_total_down}` `{net_utilization}` `{hw_window}` `{md_status}` `{xr_vr}` `{vx_friends}` `{ha_all}` … |
 | **[OSC Parameter Profiles](./plugins/osc_paramprofiles)** | `1.2.0` | Save your avatar's parameters and load them back with one click | `{osc_paramprofiles_profile}` … |
-| **[OSCLeash](./plugins/oscleash)** | `2.2.1` | Runs ZenithVal's OSCLeash from inside the chatbox | `{oscleash_state}` … |
+| **[OSCLeash](./plugins/oscleash)** | `2.2.2` | Runs ZenithVal's OSCLeash from inside the chatbox | `{oscleash_state}` … |
 | **[VR Autostart](./plugins/vr_autostart)** | `1.3.0` | Starts your whole VR set from one program | `{vr_autostart_state}` … |
 
 The full list of placeholders is in each plugin's `plugin.json` and in the app (Plugins page → a plugin → *Placeholders*).

@@ -6,11 +6,13 @@ no AppImage, no chmod - installing the plugin installs OSCLeash, and the
 Start button runs the script that is already there. Same on Windows and
 on Linux.
 
-``vendor/`` also holds the two libraries OSCLeash imports, so a plain
-python with nothing installed can run it:
+``vendor/`` also holds the libraries OSCLeash imports, so a plain
+python with nothing installed can run it - OSCQuery included:
 
     pythonosc       python-osc, public domain
     tinyoscquery    MIT, only reached when OSCQuery is switched on
+    zeroconf        LGPL, pure-python copy, needed by tinyoscquery
+    ifaddr          MIT, needed by zeroconf
 
 See VENDOR.md for versions, origins and the one modification.
 
@@ -38,6 +40,9 @@ LEASH_DIR = VENDOR_DIR / "OSCLeash"
 LEASH_SCRIPT = LEASH_DIR / "OSCLeash.py"
 # module -> what it is needed for, checked before a start that needs it
 OPTIONAL_MODULES = {"zeroconf": "OSCQuery"}
+
+# oldest python the bundle runs on: zeroconf needs 3.10
+MIN_PYTHON = (3, 10)
 
 _module_cache = {}
 
@@ -106,7 +111,11 @@ def python_exe():
     found = ""
     for exe in python_candidates():
         try:
-            if _run([exe, "-c", "import sys"]).returncode == 0:
+            # too old counts as not found: a Windows PATH often still
+            # carries a 3.8/3.9, and that would only fail later inside
+            # OSCLeash with a traceback nobody can read
+            if _run([exe, "-c", f"import sys;sys.exit(0 if sys.version_info"
+                                f" >= {MIN_PYTHON!r} else 1)"]).returncode == 0:
                 found = exe
                 break
         except Exception:
@@ -184,12 +193,15 @@ def preflight(needs_oscquery=False, port=0, ip="127.0.0.1"):
                 "folder - reinstall the plugin.")
     exe = python_exe()
     if not exe:
-        return ("no python interpreter found. The chatbox runs as a frozen "
-                "build here, so OSCLeash needs a python 3 on PATH.")
+        return ("no python 3.10 or newer found. The chatbox runs as a "
+                "frozen build here, so OSCLeash needs a python 3.10+ on "
+                "PATH (python.org installer: tick 'Add to PATH').")
     if needs_oscquery and not has_module("zeroconf", exe):
-        return (f"OSCQuery needs the 'zeroconf' module, and {exe} does not "
-                f"have it. Switch OSCQuery off for this leash, or install "
-                f"zeroconf for that interpreter.")
+        # zeroconf ships in vendor/, so this only fires when the vendor
+        # folder is incomplete
+        return (f"OSCQuery needs the 'zeroconf' module, and {exe} cannot "
+                f"find it - the plugin's vendor folder looks incomplete, "
+                f"reinstall the plugin.")
     # only meaningful without OSCQuery: with it, the port in the config
     # is ignored and OSCLeash asks the system for a free one
     if not needs_oscquery and port and not port_free(port, ip):
@@ -206,5 +218,5 @@ def describe():
     if not bundle_ok():
         return "bundled OSCLeash missing"
     if not exe:
-        return "bundled OSCLeash \u00b7 no python found"
+        return "bundled OSCLeash \u00b7 no python 3.10+ found"
     return f"bundled OSCLeash \u00b7 {exe}"

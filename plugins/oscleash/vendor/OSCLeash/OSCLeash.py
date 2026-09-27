@@ -1,8 +1,12 @@
 #!/usr/bin/env python3
+"""Vendored from ZenithVal/OSCLeash (MIT) - see LICENSE and ../VENDOR.md.
+Modified: python 3.10/3.11 compatible config path and a missing
+`import sys`. Nothing else was touched."""
 from threading import Thread
 import json
 from sys import platform
 import os
+import sys  # vendored change (yakuda): used by the restart below, never imported upstream
 import time
 
 from Controllers.DataController import DefaultConfig, ConfigSettings, Leash
@@ -51,7 +55,10 @@ if __name__ == "__main__":
     elif platform == 'win32':
         configPath = f"{os.environ.get('LocalAppData')}\Programs\OSCLeash\Config.json"
     elif platform == 'linux': 
-        configPath = f"{os.environ.get('XDG_CONFIG_HOME', f"{os.environ.get('HOME')}/.config/")}/OSCLeash/Config.json"
+        # vendored change (yakuda): the inner f-string used the same quotes
+        # as the outer one - only valid from python 3.12 on, a SyntaxError
+        # on 3.10/3.11 that stopped every leash from starting.
+        configPath = os.path.join(os.environ.get('XDG_CONFIG_HOME', f"{os.environ.get('HOME')}/.config/"), "OSCLeash", "Config.json")
 
     # Test if Config file exists. Create the default if it does not.
     if not os.path.isfile(configPath):

@@ -75,8 +75,24 @@ One thing still comes from outside:
 * **A python interpreter, 3.10 or newer.** When the chatbox runs from
   source or from the AUR package, its own python is used. A frozen build
   (the Windows .exe) is not a python, so the plugin looks for `python3` /
-  `python` / `py` on `PATH` instead, skips anything older than 3.10 and
-  says so if nothing fits.
+  `python` / `py` on `PATH` instead and skips anything older than 3.10.
+
+### Windows: "Install missing components"
+
+When a Windows build finds no usable python, the panel shows an
+**⬇ Install missing components** button. One click downloads the
+official *embeddable* python from python.org (~10 MB zip, no installer)
+into `%LOCALAPPDATA%\OSC-DreamChatbox\oscleash-python\` and uses it
+from then on.
+
+* no admin rights, nothing added to `PATH`, no registry, no console
+  window – the download runs inside the app
+* checked before use: valid zip, `python.exe` inside, a hidden test run
+* to remove it, delete that folder
+
+OSCLeash is always started through `bootstrap.py`, which puts `vendor/`
+and OSCLeash's own folder on `sys.path` – the embeddable python ignores
+`PYTHONPATH`, so this is what makes it work there.
 
 The **OSCLeash override** setting stays empty for all of this. Fill it
 in only to run your own build – a checkout's `OSCLeash.py`, an AppImage,

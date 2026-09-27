@@ -26,7 +26,9 @@ from PyQt6.QtWidgets import (
     QCheckBox, QDialog, QFrame, QGridLayout, QHBoxLayout, QLabel, QLineEdit,
     QMessageBox, QPlainTextEdit, QPushButton, QSpinBox, QVBoxLayout, QWidget)
 
-from .runtime import describe, forget_probes, port_free, preflight
+from . import pyembed
+from .runtime import (describe, forget_probes, needs_python, port_free,
+                      preflight)
 
 POLL_MS = 400
 LOG_MS = 250
@@ -495,6 +497,21 @@ class OSCLeashPanel(QWidget):
         self.btn_recheck.setVisible(False)
         bar.addWidget(self.btn_recheck)
 
+        # Windows only, and only while python is what is missing
+        self.btn_install = QPushButton("\u2B07  Install missing components")
+        self.btn_install.setFixedHeight(32)
+        self.btn_install.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.btn_install.setStyleSheet(_btn_style("#3a3024", AMBER, "#f5e2cf"))
+        self.btn_install.setToolTip(
+            "Downloads the official embeddable python from python.org "
+            "(~10 MB) into %LOCALAPPDATA%\\OSC-DreamChatbox\\oscleash-python. "
+            "No admin rights, no installer, nothing added to PATH - "
+            "deleting that folder removes it again.")
+        self.btn_install.clicked.connect(self.on_install)
+        self.btn_install.setVisible(False)
+        bar.addWidget(self.btn_install)
+        self._was_busy = False
+
         bar.addStretch()
         self.info = QLabel("")
         self.info.setObjectName("dim")
@@ -548,6 +565,10 @@ class OSCLeashPanel(QWidget):
         forget_probes()
         self.sync()
 
+    def on_install(self):
+        pyembed.start_install()
+        self.sync()
+
     def on_all(self):
         if self.manager.running_count():
             self.manager.stop_all()
@@ -581,6 +602,23 @@ class OSCLeashPanel(QWidget):
                           + (override or describe()))
 
         problems = []
+        # the install button: the worker thread only writes pyembed.STATE,
+        # this timer reads it - no Qt call ever leaves the GUI thread
+        state = dict(pyembed.STATE)
+        if self._was_busy and not state["busy"]:
+            forget_probes()          # a new python may be there now
+        self._was_busy = state["busy"]
+        if state["busy"]:
+            self.btn_install.setVisible(True)
+            self.btn_install.setEnabled(False)
+            self.btn_install.setText(
+                f"\u2B07  {state['msg']} {state['pct']} %")
+        else:
+            self.btn_install.setEnabled(True)
+            self.btn_install.setText("\u2B07  Install missing components")
+            self.btn_install.setVisible(pyembed.available() and needs_python())
+        if state["error"]:
+            problems.append(state["error"])
         # OSCLeash ships inside the plugin, so the only questions left are
         # whether the vendor folder survived the install and whether there
         # is an interpreter to run it with

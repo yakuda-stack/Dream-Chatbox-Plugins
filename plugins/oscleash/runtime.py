@@ -20,7 +20,12 @@ The interpreter is the part that needs care. ``sys.executable`` is
 python when the chatbox runs from source and it is *the chatbox itself*
 when it runs as a PyInstaller build - handing that a script argument
 would open a second chatbox instead of starting OSCLeash. So a frozen
-build looks for a real python on PATH instead.
+build uses the private python from pyembed.py (Windows, one button in
+the panel) or looks for a real python on PATH.
+
+Every start goes through bootstrap.py, which puts vendor/ and
+OSCLeash's own folder on sys.path - PYTHONPATH alone is not enough,
+because the private embeddable python ignores it.
 """
 
 # Copyright (C) 2026 yakuda
@@ -38,6 +43,7 @@ IS_WINDOWS = os.name == "nt"
 VENDOR_DIR = Path(__file__).resolve().parent / "vendor"
 LEASH_DIR = VENDOR_DIR / "OSCLeash"
 LEASH_SCRIPT = LEASH_DIR / "OSCLeash.py"
+BOOTSTRAP = Path(__file__).resolve().parent / "bootstrap.py"
 # module -> what it is needed for, checked before a start that needs it
 OPTIONAL_MODULES = {"zeroconf": "OSCQuery"}
 
@@ -83,6 +89,11 @@ def python_candidates():
     if not getattr(sys, "frozen", False) and sys.executable \
             and _looks_like_python(sys.executable):
         out.append(sys.executable)
+    # the private python from the "Install missing components" button:
+    # known to work, so it goes before whatever PATH happens to hold
+    from . import pyembed
+    if pyembed.installed():
+        out.append(str(pyembed.exe_path()))
     for name in ("python3", "python", "py"):
         found = shutil.which(name)
         if found and found not in out:
@@ -134,8 +145,12 @@ def has_module(name, exe=""):
     if key in _module_cache:
         return _module_cache[key]
     try:
+        # vendor/ goes in through the code, not PYTHONPATH: the private
+        # embeddable python ignores PYTHONPATH, exactly like the real
+        # start through bootstrap.py does not rely on it
         res = _run([exe, "-c",
                     f"import importlib.util as u,sys;"
+                    f"sys.path.insert(0,{str(VENDOR_DIR)!r});"
                     f"sys.exit(0 if u.find_spec({name!r}) else 1)"],
                    env=child_env())
         ok = res.returncode == 0
@@ -180,6 +195,12 @@ def port_free(port, ip="127.0.0.1"):
         sock.close()
 
 
+def needs_python():
+    """True when the only thing missing is an interpreter - the case the
+    panel's install button can fix."""
+    return bundle_ok() and not python_exe()
+
+
 def preflight(needs_oscquery=False, port=0, ip="127.0.0.1"):
     """What would stop a start, as a readable sentence. Empty = fine.
 
@@ -193,9 +214,15 @@ def preflight(needs_oscquery=False, port=0, ip="127.0.0.1"):
                 "folder - reinstall the plugin.")
     exe = python_exe()
     if not exe:
+        from . import pyembed
+        if pyembed.available():
+            return ("OSCLeash needs python, and this Windows build has "
+                    "none it can use. Click 'Install missing components' "
+                    "- it fetches a private python from python.org "
+                    "(~10 MB, no admin, no installer).")
         return ("no python 3.10 or newer found. The chatbox runs as a "
                 "frozen build here, so OSCLeash needs a python 3.10+ on "
-                "PATH (python.org installer: tick 'Add to PATH').")
+                "PATH.")
     if needs_oscquery and not has_module("zeroconf", exe):
         # zeroconf ships in vendor/, so this only fires when the vendor
         # folder is incomplete
@@ -219,4 +246,8 @@ def describe():
         return "bundled OSCLeash missing"
     if not exe:
         return "bundled OSCLeash \u00b7 no python 3.10+ found"
+    from . import pyembed
+    if pyembed.installed() and exe == str(pyembed.exe_path()):
+        return (f"bundled OSCLeash \u00b7 private python "
+                f"{pyembed.version()}".rstrip())
     return f"bundled OSCLeash \u00b7 {exe}"

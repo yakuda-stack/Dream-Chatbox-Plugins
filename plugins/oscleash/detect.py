@@ -102,7 +102,7 @@ def build_command(path):
     if not p.is_file():
         return None
     if kind_of(p) == "source":
-        from .runtime import python_exe
+        from .runtime import BOOTSTRAP, python_exe
         exe = python_exe()
         if not exe:
             return None
@@ -111,7 +111,10 @@ def build_command(path):
         # escape sequence on every single start. It is harmless, it is
         # not our file to fix, and two lines of noise at the top of every
         # debug log is two lines people ask about.
-        return [exe, "-W", "ignore::SyntaxWarning", str(p)]
+        # through bootstrap.py: it puts vendor/ and the script's folder on
+        # sys.path, which the private embeddable python on Windows would
+        # otherwise never do (it ignores PYTHONPATH)
+        return [exe, "-W", "ignore::SyntaxWarning", str(BOOTSTRAP), str(p)]
     return [str(p)]
 
 

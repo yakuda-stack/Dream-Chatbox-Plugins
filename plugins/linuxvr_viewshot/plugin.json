@@ -1,0 +1,196 @@
+{
+  "name": "LinuxVR-ViewShot",
+  "id": "linuxvr_viewshot",
+  "version": "1.0.0",
+  "author": "yakuda",
+  "description": "Shows the translations of LinuxVR-ViewShot (VR photos with a hand-frame gesture on Linux) in your chatbox. Take a photo of a sign in VR, ViewShot translates it, and the translation appears in the chatbox for 2-10 seconds - then the chatbox goes back to what you normally send. Gets the text by OSC (port 9025) or from ViewShot's translation.json. Needs ViewShot 1.0.1+ with Options -> General -> Output switched on.",
+  "short_description": "ViewShot translations in the chatbox for a few seconds, then back to normal.",
+  "about": {
+    "format": "markdown",
+    "text": [
+      "## What it does",
+      "",
+      "[LinuxVR-ViewShot](https://github.com/yakuda-stack/LinuxVR-ViewShot) takes photos in VR with a hand-frame gesture and translates the text in them.",
+      "This plugin puts every new translation **into your chatbox for a few seconds** (2-10, your choice).",
+      "When the time is up, the chatbox shows your normal lines again by itself.",
+      "",
+      "## Setup",
+      "",
+      "1. In ViewShot: **Options → General → Output** – switch on **Send via OSC** (port `9025`) *or* **Write to a file**.",
+      "2. Here: pick the same source. Defaults fit ViewShot's defaults.",
+      "3. Press **Test** – the test line should appear in the chatbox.",
+      "",
+      "## Where the translation goes",
+      "",
+      "- **Replace the chatbox** – only the translation, then back (default)",
+      "- **On top** – the translation above your normal lines",
+      "- **Only the placeholder** – put `{linuxvr_viewshot_translation}` where you want it",
+      "",
+      "Long translations are cut at 144 characters. 🔁 Lens (live translation) sends again only when the text changed.",
+      "OSC is only received from this PC (127.0.0.1)."
+    ]
+  },
+  "tags": [
+    "translation",
+    "vr",
+    "photo",
+    "viewshot",
+    "linux"
+  ],
+  "Github": "github.com/yakuda-stack",
+  "main": "main.py",
+  "image": "logo.png",
+  "enabled": false,
+  "api": 2,
+  "min_app": "v1.4.4",
+  "is_linux": true,
+  "is_windows": true,
+  "headless": true,
+  "chatbox": {
+    "enabled": false,
+    "user_editable": false
+  },
+  "template": "{linuxvr_viewshot_translation}",
+  "placeholders": {
+    "translation": "the translation (with prefix) - only while it is shown, then empty",
+    "original": "the recognised original text - only while shown",
+    "source": "photo / lens / test - only while shown",
+    "last": "the latest translation, stays until the next one"
+  },
+  "settings": [
+    {
+      "key": "status",
+      "type": "label",
+      "label": "Status",
+      "default": "starting …",
+      "hint": "Where the plugin is listening right now."
+    },
+    {
+      "key": "source",
+      "type": "choice",
+      "label": "Get translations by",
+      "default": "osc",
+      "hint": "Must match ViewShot: Options → General → Output.",
+      "choices": [
+        {
+          "value": "osc",
+          "label": "📡 OSC (recommended)"
+        },
+        {
+          "value": "file",
+          "label": "📄 File (translation.json)"
+        }
+      ]
+    },
+    {
+      "key": "port",
+      "type": "int",
+      "label": "OSC port",
+      "default": 9025,
+      "min": 1024,
+      "max": 65535,
+      "hint": "Same port as in ViewShot. Not 9000/9001 - those belong to VRChat. Only this PC can send here (127.0.0.1).",
+      "depends": "source",
+      "depends_value": "osc"
+    },
+    {
+      "key": "file",
+      "type": "path",
+      "label": "File",
+      "default": "",
+      "mode": "file",
+      "filters": ["JSON (*.json)"],
+      "placeholder": "empty = ~/.local/state/linuxvr-viewshot/translation.json",
+      "hint": "Same file as in ViewShot. A new translation is noticed by its id, even with the same text.",
+      "depends": "source",
+      "depends_value": "file"
+    },
+    {
+      "key": "seconds",
+      "type": "slider",
+      "label": "Show for",
+      "default": 5,
+      "min": 2,
+      "max": 10,
+      "suffix": " s",
+      "hint": "How long the translation stays in the chatbox before your normal lines come back."
+    },
+    {
+      "key": "mode",
+      "type": "choice",
+      "label": "In the chatbox",
+      "default": "replace",
+      "choices": [
+        {
+          "value": "replace",
+          "label": "Replace the chatbox (only the translation)"
+        },
+        {
+          "value": "top",
+          "label": "On top of your normal lines"
+        },
+        {
+          "value": "placeholder",
+          "label": "Only the placeholder {linuxvr_viewshot_translation}"
+        }
+      ]
+    },
+    {
+      "key": "look",
+      "type": "group",
+      "label": "Look",
+      "expanded": false,
+      "items": [
+        {
+          "key": "prefix",
+          "type": "emoji",
+          "label": "Prefix",
+          "default": "🌐",
+          "hint": "In front of the translation. Empty = none."
+        },
+        {
+          "key": "one_line",
+          "type": "bool",
+          "label": "Everything in one line",
+          "default": false,
+          "hint": "Joins the lines of a long translation with · – saves chatbox lines."
+        },
+        {
+          "key": "with_original",
+          "type": "bool",
+          "label": "Also the original text",
+          "default": false,
+          "hint": "original ➜ translation. Costs characters - long texts get cut at 144."
+        }
+      ]
+    },
+    {
+      "key": "which",
+      "type": "group",
+      "label": "Which translations",
+      "expanded": false,
+      "items": [
+        {
+          "key": "show_photo",
+          "type": "bool",
+          "label": "📸 Photos",
+          "default": true
+        },
+        {
+          "key": "show_lens",
+          "type": "bool",
+          "label": "🔁 Lens (live translation)",
+          "default": true,
+          "hint": "Lens sends again every time the text changes - turn off if that is too much for the chatbox."
+        }
+      ]
+    },
+    {
+      "key": "test",
+      "type": "action",
+      "label": "Try it",
+      "button": "Test",
+      "hint": "Shows a test line in the chatbox for the time set above."
+    }
+  ]
+}

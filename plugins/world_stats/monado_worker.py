@@ -113,8 +113,11 @@ def _resolve(lib, json_path):
     if p.is_absolute():
         return str(p) if p.is_file() else ""
     if len(p.parts) > 1:
-        p = (json_path.parent / p).resolve()
-        return str(p) if p.is_file() else ""
+        for base in (json_path.resolve().parent, json_path.parent):
+            cand = (base / p).resolve()
+            if cand.is_file():
+                return str(cand)
+        return ""
     # bare filename: libmonado.so -> ask the loader
     stem = p.name
     if stem.startswith("lib") and ".so" in stem:

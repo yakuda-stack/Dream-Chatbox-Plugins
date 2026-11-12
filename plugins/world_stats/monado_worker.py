@@ -41,7 +41,7 @@ Finding the library follows libmonado's own auto_connect():
     XR_RUNTIME_JSON                       if the user set it
     XDG config .../openxr/1/active_runtime.json
 
-and then the "libmonado_path" key inside that runtime json - absolute,
+and then the "MND_libmonado_path" key inside that runtime json - absolute,
 relative to the json, or a bare soname to resolve on the loader path.
 So it lands on whatever runtime is currently active, whether that is
 /usr/lib/wivrn, a Flatpak, an Envision build in ~/.local, or Monado
@@ -105,7 +105,7 @@ def _runtime_jsons():
 
 
 def _resolve(lib, json_path):
-    """The libmonado_path out of a runtime json, made loadable.
+    """The MND_libmonado_path out of a runtime json, made loadable.
 
     It may be absolute, relative to the json itself, or a bare soname
     that only the loader can find."""
@@ -137,7 +137,8 @@ def library_path():
             data = json.loads(jp.read_text(encoding="utf-8"))
         except Exception:
             continue
-        lib = ((data or {}).get("runtime") or {}).get("libmonado_path", "")
+        rt = (data or {}).get("runtime") or {}
+        lib = rt.get("MND_libmonado_path") or rt.get("libmonado_path", "")
         if not lib:
             continue
         got = _resolve(str(lib), jp)
